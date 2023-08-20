@@ -66,6 +66,10 @@ public interface Web3XdagModule {
         return getXdagModule().getBlockByNumber(bnOrId, page);
     }
 
+    default BlockResultDTO xdag_getBlockByNumber(String bnOrId, int page, int pageSize) {
+        return getXdagModule().getBlockByNumber(bnOrId, page, pageSize);
+    }
+
     default String xdag_getRewardByNumber(String bnOrId) {
         return getXdagModule().getRewardByNumber(bnOrId);
     }
@@ -96,6 +100,14 @@ public interface Web3XdagModule {
 
     default BlockResultDTO xdag_getBlockByHash(String blockHash, int page) {
         return getXdagModule().getBlockByHash(blockHash, page);
+    }
+
+    default BlockResultDTO xdag_getBlockByHash(String blockHash, int page, String startTime, String endTime, int pageSize) {
+        return getXdagModule().getBlockByHash(blockHash, page, startTime, endTime, pageSize);
+    }
+
+    default BlockResultDTO xdag_getBlockByHash(String blockHash, int page, int pageSize) {
+        return getXdagModule().getBlockByHash(blockHash, page, pageSize);
     }
 
     StatusDTO xdag_getStatus() throws Exception;
