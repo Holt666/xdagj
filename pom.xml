@@ -16,7 +16,7 @@
         <dist.phase>package</dist.phase>
         <dist.base>${project.basedir}/dist</dist.base>
 
-        <xdagj-native-randomx.version>0.1.9</xdagj-native-randomx.version>
+        <xdagj-native-randomx.version>0.2.0</xdagj-native-randomx.version>
         <netty.version>4.1.116.Final</netty.version>
         <tuweni.version>2.4.2</tuweni.version>
         <jackson.version>2.18.2</jackson.version>
@@ -124,7 +124,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.2</version>
                 <configuration>
-                    <argLine>-Xmx2048m</argLine>
                     <excludes>
                         <exclude>${surefire.test.excludes}</exclude>
                     </excludes>
