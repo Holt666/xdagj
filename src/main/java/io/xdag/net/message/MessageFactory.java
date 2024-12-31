@@ -26,8 +26,10 @@ package io.xdag.net.message;
 
 import io.xdag.net.message.consensus.*;
 import io.xdag.net.message.p2p.DisconnectMessage;
+import io.xdag.net.message.p2p.GetNodesMessage;
 import io.xdag.net.message.p2p.HelloMessage;
 import io.xdag.net.message.p2p.InitMessage;
+import io.xdag.net.message.p2p.NodesMessage;
 import io.xdag.net.message.p2p.PingMessage;
 import io.xdag.net.message.p2p.PongMessage;
 import io.xdag.net.message.p2p.WorldMessage;
@@ -42,15 +44,13 @@ public class MessageFactory {
      *            The message code
      * @param body
      *            The message body
-     * @return The decoded message, or NULL if the message type is not unknown
+     * @return The decoded message, or NULL if the message type is unknown
      * @throws MessageException
      *             when the encoding is illegal
      */
     public Message create(byte code, byte[] body) throws MessageException {
-
         MessageCode c = MessageCode.of(code);
         if (c == null) {
-            //log.debug("Invalid message code: {}", Hex.encode0x(Bytes.of(code)));
             return null;
         }
 
@@ -62,6 +62,8 @@ public class MessageFactory {
                 case DISCONNECT -> new DisconnectMessage(body);
                 case PING -> new PingMessage(body);
                 case PONG -> new PongMessage(body);
+                case GET_NODES -> new GetNodesMessage(body);
+                case NODES -> new NodesMessage(body);
                 case BLOCKS_REQUEST -> new BlocksRequestMessage(body);
                 case BLOCKS_REPLY -> new BlocksReplyMessage(body);
                 case SUMS_REQUEST -> new SumRequestMessage(body);

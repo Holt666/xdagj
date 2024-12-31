@@ -38,6 +38,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import io.xdag.crypto.Keys;
+import io.xdag.utils.WalletUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -51,7 +53,6 @@ public class ChannelManager extends AbstractXdagLifecycle {
     private final BlockingQueue<BlockWrapper> newForeignBlocks = new LinkedBlockingQueue<>();
     // Thread for block distribution
     private final Thread blockDistributeThread;
-    private final Set<InetSocketAddress> addressSet = new HashSet<>();
     protected ConcurrentHashMap<InetSocketAddress, Channel> channels = new ConcurrentHashMap<>();
     protected ConcurrentHashMap<String, Channel> activeChannels = new ConcurrentHashMap<>();
     private static final int LRU_CACHE_SIZE = 1024;
@@ -59,12 +60,13 @@ public class ChannelManager extends AbstractXdagLifecycle {
     @Getter
     private final Cache<InetSocketAddress, Long> channelLastConnect = Caffeine.newBuilder().maximumSize(LRU_CACHE_SIZE).build();
 
+    @Getter
+    private final Set<InetSocketAddress> addressSet = new HashSet<>();
 
     public ChannelManager(Kernel kernel) {
         this.kernel = kernel;
         // Resending new blocks to network in loop
         this.blockDistributeThread = new Thread(this::newBlocksDistributeLoop, "NewSyncThreadBlocks");
-        initWhiteIPs();
     }
 
     @Override
@@ -168,10 +170,6 @@ public class ChannelManager extends AbstractXdagLifecycle {
 
     public void onNewForeignBlock(BlockWrapper blockWrapper) {
         newForeignBlocks.add(blockWrapper);
-    }
-
-    private void initWhiteIPs() {
-        addressSet.addAll(kernel.getConfig().getNodeSpec().getWhiteIPList());
     }
 
     // use for ipv4

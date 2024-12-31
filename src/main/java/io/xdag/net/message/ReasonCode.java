@@ -71,7 +71,12 @@ public enum ReasonCode {
     /**
      * [0x08] The manifests malicious behavior.
      */
-    BAD_PEER(0x08);
+    BAD_PEER(0x08),
+
+    /**
+     * [0x09] Invalid address-IP binding.
+     */
+    INVALID_ADDRESS_IP(0x09);
 
     private final int code;
 

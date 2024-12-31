@@ -41,7 +41,7 @@ public class DevnetConfig extends AbstractConfig {
      * Constructor initializes devnet configuration with specific parameters:
      * - Network type: DEVNET
      * - Version: DEVNET_VERSION
-     * - Empty whitelist URL
+     * - Empty authorized addresses list
      * - Wait epoch: 1
      * - XDAG era: 0x16900000000L
      * - Main start amount: 2^42 XDAG

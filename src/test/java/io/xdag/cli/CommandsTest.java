@@ -66,8 +66,6 @@ import io.xdag.crypto.Keys;
 import io.xdag.crypto.Sign;
 import io.xdag.db.AddressStore;
 import io.xdag.db.BlockStore;
-import io.xdag.net.NetDBManager;
-import io.xdag.net.NetDB;
 import io.xdag.utils.BasicUtils;
 import io.xdag.utils.BytesUtils;
 import io.xdag.utils.XdagTime;
@@ -177,22 +175,17 @@ public class CommandsTest {
 
     @Test
     public void testStats() {
-        NetDB netDB = new NetDB();
-        netDB.addNewIP("127.0.0.1:7001");
-        NetDBManager netDBManager = new NetDBManager(config);
-
         Mockito.when(blockchain.getXdagTopStatus()).thenReturn(new XdagTopStatus());
         Mockito.when(blockchain.getXdagStats()).thenReturn(new XdagStats());
         Mockito.when(blockchain.getXdagExtStats()).thenReturn(new XdagExtStats());
         Mockito.when(blockchain.getSupply(Mockito.anyLong())).thenReturn(XAmount.of(1400000000, XUnit.XDAG));
         Mockito.when(addressStore.getAllBalance()).thenReturn(XAmount.of(100000, XUnit.XDAG));
         Mockito.when(addressStore.getAddressSize()).thenReturn(UInt64.valueOf(100));
-        Mockito.when(kernel.getNetDB()).thenReturn(netDB);
-        Mockito.when(kernel.getNetDBMgr()).thenReturn(netDBManager);
+
         String str = commands.stats();
         assertEquals("""
                 Statistics for ours and maximum known parameters:
-                            hosts: 1 of 0
+                            hosts: 2 of 2
                            blocks: 0 of 0
                       main blocks: 0 of 0
                      extra blocks: 0

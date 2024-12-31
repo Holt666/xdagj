@@ -33,6 +33,7 @@ import io.xdag.core.XdagField;
 import io.xdag.net.Capability;
 import io.xdag.net.CapabilityTreeSet;
 import io.xdag.net.message.MessageCode;
+import io.xdag.net.node.Node;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -93,26 +94,26 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
     protected boolean enableTxHistory = false;
     protected long txPageSizeLimit = 500;
     protected boolean enableGenerateBlock = false;
+    protected List<Node> seedNodes = Lists.newArrayList();
 
     // Storage configuration
     protected String rootDir;
     protected String storeDir;
     protected String storeBackupDir;
-    protected String whiteListDir;
-    protected String rejectAddress;
     protected String netDBDir;
+    protected String rejectAddress;
 
     protected int storeMaxOpenFiles = 1024;
     protected int storeMaxThreads = 1;
     protected boolean storeFromBackup = false;
     protected String originStoreDir = "./testdate";
 
-    // Whitelist configuration
+
     protected String walletKeyFile;
 
     protected int TTL = 5;
-    protected List<InetSocketAddress> whiteIPList = Lists.newArrayList();
-    protected List<String> poolWhiteIPList = Lists.newArrayList();
+    // Authorized addresses configuration
+    protected List<InetSocketAddress> authorizedAddresses = Lists.newArrayList();
 
     // Wallet configuration
     protected String walletFilePath;
@@ -238,12 +239,16 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
         adminTelnetPort = config.hasPath("admin.telnet.port") ? config.getInt("admin.telnet.port") : 6001;
         adminTelnetPassword = config.getString("admin.telnet.password");
 
-        poolWhiteIPList = config.hasPath("pool.whiteIPs") ? config.getStringList("pool.whiteIPs") : Collections.singletonList("127.0.0.1");
-        log.info("Pool whitelist {}. Any IP allowed? {}", poolWhiteIPList, poolWhiteIPList.contains("0.0.0.0"));
         websocketServerPort = config.hasPath("pool.ws.port") ? config.getInt("pool.ws.port") : 7001;
         nodeIp = config.hasPath("node.ip") ? config.getString("node.ip") : "127.0.0.1";
         nodePort = config.hasPath("node.port") ? config.getInt("node.port") : 8001;
         nodeTag = config.hasPath("node.tag") ? config.getString("node.tag") : "xdagj";
+        List<String> seedNodesList = config.hasPath("node.seednodes") ? config.getStringList("node.seednodes") : Lists.newArrayList();
+        for (String node : seedNodesList) {
+            if (!node.trim().isEmpty()) {
+                seedNodes.add(new Node(node, 8001));
+            }
+        }
         rejectAddress = config.hasPath("node.reject.transaction.address") ? config.getString("node.reject.transaction.address") : "";
         maxInboundConnectionsPerIp = config.getInt("node.maxInboundConnectionsPerIp");
         enableTxHistory = config.hasPath("node.transaction.history.enable") && config.getBoolean("node.transaction.history.enable");
@@ -252,13 +257,7 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
         fundAddress = config.hasPath("fund.address") ? config.getString("fund.address") : "4duPWMbYUgAifVYkKDCWxLvRRkSByf5gb";
         fundRation = config.hasPath("fund.ration") ? config.getDouble("fund.ration") : 5;
         nodeRation = config.hasPath("node.ration") ? config.getDouble("node.ration") : 5;
-        List<String> whiteIpList = config.getStringList("node.whiteIPs");
-        log.debug("{} IP access", whiteIpList.size());
-        for (String addr : whiteIpList) {
-            String ip = addr.split(":")[0];
-            int port = Integer.parseInt(addr.split(":")[1]);
-            whiteIPList.add(new InetSocketAddress(ip, port));
-        }
+
         // RPC configuration
         rpcHttpEnabled = config.hasPath("rpc.http.enabled") && config.getBoolean("rpc.http.enabled");
         if (rpcHttpEnabled) {
@@ -325,11 +324,6 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
     @Override
     public int getMaxInboundConnectionsPerIp() {
         return this.maxInboundConnectionsPerIp;
-    }
-
-    @Override
-    public List<String> getPoolWhiteIPList() {
-        return poolWhiteIPList;
     }
 
     @Override
@@ -420,4 +414,30 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
     public long getSnapshotTime() {
         return snapshotTime;
     }
+
+    @Override
+    public List<Node> getSeedNodes() {
+        return seedNodes;
+    }
+
+    @Override
+    public List<String> getDnsSeedsMainNet() {
+        return Arrays.asList("mainnet-seed.xdag.io");
+    }
+
+    @Override
+    public List<String> getDnsSeedsTestNet() {
+        return Arrays.asList("testnet-seed.xdag.io");
+    }
+
+    @Override
+    public List<InetSocketAddress> getAuthorizedAddresses() {
+        return authorizedAddresses;
+    }
+
+    @Override
+    public void setAuthorizedAddresses(List<InetSocketAddress> list) {
+        this.authorizedAddresses = list;
+    }
+
 }

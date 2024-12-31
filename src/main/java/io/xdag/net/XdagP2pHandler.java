@@ -23,28 +23,10 @@
  */
 package io.xdag.net;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.commons.lang3.time.FastDateFormat;
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
-import org.apache.tuweni.bytes.MutableBytes;
-import org.apache.tuweni.bytes.MutableBytes32;
-import org.hyperledger.besu.crypto.SecureRandomProvider;
-
-import com.google.common.util.concurrent.SettableFuture;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.xdag.Kernel;
+import io.xdag.Network;
 import io.xdag.config.Config;
 import io.xdag.config.spec.NodeSpec;
 import io.xdag.consensus.SyncManager;
@@ -55,30 +37,33 @@ import io.xdag.core.XdagStats;
 import io.xdag.net.message.Message;
 import io.xdag.net.message.MessageQueue;
 import io.xdag.net.message.ReasonCode;
-import io.xdag.net.message.consensus.BlockExtRequestMessage;
-import io.xdag.net.message.consensus.BlockRequestMessage;
-import io.xdag.net.message.consensus.BlocksReplyMessage;
-import io.xdag.net.message.consensus.BlocksRequestMessage;
-import io.xdag.net.message.consensus.NewBlockMessage;
-import io.xdag.net.message.consensus.SumReplyMessage;
-import io.xdag.net.message.consensus.SumRequestMessage;
-import io.xdag.net.message.consensus.SyncBlockMessage;
-import io.xdag.net.message.consensus.SyncBlockRequestMessage;
-import io.xdag.net.message.consensus.XdagMessage;
-import io.xdag.net.message.p2p.DisconnectMessage;
-import io.xdag.net.message.p2p.HelloMessage;
-import io.xdag.net.message.p2p.InitMessage;
-import io.xdag.net.message.p2p.PingMessage;
-import io.xdag.net.message.p2p.PongMessage;
-import io.xdag.net.message.p2p.WorldMessage;
+import io.xdag.net.message.consensus.*;
+import io.xdag.net.message.p2p.*;
 import io.xdag.net.node.NodeManager;
+import io.xdag.net.node.NodeInfo;
+import io.xdag.net.node.Node;
 import io.xdag.utils.XdagTime;
 import io.xdag.utils.exception.UnreachableException;
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.util.encoders.Hex;
 
-/**
- * Xdag P2P message handler
- */
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.SettableFuture;
+import org.apache.commons.lang3.time.FastDateFormat;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.bytes.MutableBytes;
+import org.apache.tuweni.bytes.MutableBytes32;
+import org.hyperledger.besu.crypto.SecureRandomProvider;
+import io.xdag.crypto.Keys;
+
 @Slf4j
 public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
 
@@ -103,7 +88,6 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
     private final PeerClient client;
     private final SyncManager syncMgr;
 
-    private final NetDBManager netdbMgr;
     private final MessageQueue msgQueue;
 
     private final AtomicBoolean isHandshakeDone = new AtomicBoolean(false);
@@ -113,6 +97,8 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
 
     private byte[] secret = SecureRandomProvider.publicSecureRandom().generateSeed(InitMessage.SECRET_LENGTH);
     private long timestamp = System.currentTimeMillis();
+
+    private long lastPing;
 
     public XdagP2pHandler(Channel channel, Kernel kernel) {
         this.channel = channel;
@@ -126,7 +112,6 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
         this.client = kernel.getClient();
 
         this.syncMgr = kernel.getSyncMgr();
-        this.netdbMgr = kernel.getNetDBMgr();
         this.msgQueue = channel.getMessageQueue();
     }
 
@@ -185,11 +170,13 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
         switch (msg.getCode()) {
         /* p2p */
         case DISCONNECT -> onDisconnect(ctx, (DisconnectMessage) msg);
-        case PING -> onPing();
-        case PONG -> onPong();
+        case PING -> onPing((PingMessage) msg);
+        case PONG -> onPong((PongMessage) msg);
         case HANDSHAKE_INIT -> onHandshakeInit((InitMessage) msg);
         case HANDSHAKE_HELLO -> onHandshakeHello((HelloMessage) msg);
         case HANDSHAKE_WORLD -> onHandshakeWorld((WorldMessage) msg);
+        case GET_NODES -> onGetNodes();
+        case NODES -> onNodes((NodesMessage) msg);
 
         /* sync */
         case BLOCKS_REQUEST, BLOCKS_REPLY, SUMS_REQUEST, SUMS_REPLY, BLOCKEXT_REQUEST, BLOCKEXT_REPLY, BLOCK_REQUEST, NEW_BLOCK, SYNC_BLOCK, SYNCBLOCK_REQUEST ->
@@ -234,7 +221,7 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
         if (channel.isOutbound()) {
             return;
         }
-        Peer peer = msg.getPeer(channel.getRemoteIp());
+        Peer peer = msg.getPeer(channel.getRemoteIp(), msg.getPublicKey());
 
         // check peer
         ReasonCode code = checkPeer(peer, true);
@@ -248,6 +235,18 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
             msgQueue.disconnect(ReasonCode.INVALID_HANDSHAKE);
             return;
         }
+
+        // check address authorization
+        String address = Hex.toHexString(Keys.toBytesAddress(msg.getPublicKey()));
+        if (!nodeMgr.isAddressAuthorized(address)) {
+            log.warn("Unauthorized node attempt to connect: {}, ip: {}", 
+                    address, channel.getRemoteIp());
+            msgQueue.disconnect(ReasonCode.BAD_PEER);
+            return;
+        }
+
+        // record channel for this address
+        nodeMgr.recordAddressChannel(address, channel.getSocket());
 
         // send the WORLD message
         this.msgQueue.sendMessage(new WorldMessage(nodeSpec.getNetwork(), nodeSpec.getNetworkVersion(), client.getPeerId(),
@@ -264,7 +263,7 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
         if (channel.isInbound()) {
             return;
         }
-        Peer peer = msg.getPeer(channel.getRemoteIp());
+        Peer peer = msg.getPeer(channel.getRemoteIp(), msg.getPublicKey());
 
         // check peer
         ReasonCode code = checkPeer(peer, true);
@@ -279,19 +278,29 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
             return;
         }
 
+        // check address authorization
+        String address = Hex.toHexString(Keys.toBytesAddress(msg.getPublicKey()));
+        if (!nodeMgr.isAddressAuthorized(address)) {
+            log.warn("Unauthorized node attempt to connect: {}, ip: {}", 
+                    address, channel.getRemoteIp());
+            msgQueue.disconnect(ReasonCode.BAD_PEER);
+            return;
+        }
+
+        // record channel for this address
+        nodeMgr.recordAddressChannel(address, channel.getSocket());
+
         // handshake done
         onHandshakeDone(peer);
     }
 
-    private long lastPing;
-
-    protected void onPing() {
-        PongMessage pong = new PongMessage();
-        msgQueue.sendMessage(pong);
+    protected void onPing(PingMessage msg) {
+        // No need to validate address here since it was done during handshake
         lastPing = System.currentTimeMillis();
+        msgQueue.sendMessage(new PongMessage(true)); // Always send true since validation was done during handshake
     }
 
-    protected void onPong() {
+    protected void onPong(PongMessage msg) {
         if (lastPing > 0) {
             long latency = System.currentTimeMillis() - lastPing;
             channel.getRemotePeer().setLatency(latency);
@@ -339,11 +348,80 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
             // register into channel manager
             channelMgr.onChannelActive(channel, peer);
 
-            // start ping pong
-            pingPong = exec.scheduleAtFixedRate(() -> msgQueue.sendMessage(new PingMessage()),
-                    channel.isInbound() ? 1 : 0, 1, TimeUnit.MINUTES);
+            // start ping pong with local node info
+            pingPong = exec.scheduleAtFixedRate(() -> {
+                // Create NodeInfo from local node
+                Node localNode = client.getNode();
+                try {
+                    byte[] ip = InetAddress.getByName(localNode.getIp()).getAddress();
+                    NodeInfo nodeInfo = NodeInfo.create(ip, client.getCoinbase());
+                    msgQueue.sendMessage(new PingMessage(nodeInfo));
+                } catch (UnknownHostException e) {
+                    log.error("Failed to create NodeInfo", e);
+                }
+            }, channel.isInbound() ? 1 : 0, 1, TimeUnit.MINUTES);
         } else {
             msgQueue.disconnect(ReasonCode.HANDSHAKE_EXISTS);
+        }
+    }
+
+    protected void onGetNodes() {
+        if (!isHandshakeDone.get()) {
+            return;
+        }
+
+        List<Channel> activeChannels = channelMgr.getActiveChannels();
+        List<NodeInfo> nodes = Lists.newArrayList();
+        
+        // Convert active channels to NodeInfo objects
+        for (Channel c : activeChannels) {
+            Peer p = c.getRemotePeer();
+            if (p != null) {
+                byte[] ip = parseIpString(p.getIp());
+                if (ip != null) {
+                    NodeInfo nodeInfo = NodeInfo.create(ip, client.getCoinbase());
+                    nodes.add(nodeInfo);
+                }
+            }
+        }
+        
+        // Only include authorized addresses if this is a DNS seed node
+        Set<String> authorizedAddresses = null;
+        String localIp = client.getNode().getIp();
+        List<String> dnsSeeds = nodeSpec.getNetwork() == Network.MAINNET ? 
+                nodeSpec.getDnsSeedsMainNet() : nodeSpec.getDnsSeedsTestNet();
+        
+        if (dnsSeeds.contains(localIp)) {
+            authorizedAddresses = nodeMgr.getAuthorizedAddresses();
+        }
+        
+        // Send nodes message
+        msgQueue.sendMessage(new NodesMessage(nodes, authorizedAddresses));
+    }
+
+    protected void onNodes(NodesMessage msg) {
+        if (!isHandshakeDone.get()) {
+            return;
+        }
+
+        // Process the nodes message with sender IP
+        nodeMgr.processNodes(msg, channel.getRemoteIp());
+    }
+
+    private byte[] parseIpString(String ipString) {
+        try {
+            String[] parts = ipString.split("\\.");
+            if (parts.length != 4) {
+                return null;
+            }
+            byte[] bytes = new byte[4];
+            for (int i = 0; i < 4; i++) {
+                bytes[i] = (byte) Integer.parseInt(parts[i]);
+            }
+            return bytes;
+        } catch (Exception e) {
+            log.warn("Failed to parse IP string: {}", ipString);
+            return null;
         }
     }
 

@@ -56,10 +56,11 @@ public class WorldMessageTest {
         assertTrue(msg.validate(config));
 
         String ip = "127.0.0.2";
-        Peer peer = msg.getPeer(ip);
+        Peer peer = msg.getPeer(ip, key.getPublicKey());
         assertEquals(config.getNodeSpec().getNetwork(), peer.getNetwork());
         assertEquals(config.getNodeSpec().getNetworkVersion(), peer.getNetworkVersion());
         assertEquals(toBase58(Keys.toBytesAddress(key)), peer.getPeerId());
+        assertEquals(key.getPublicKey(), peer.getPublicKey());
         assertEquals(ip, peer.getIp());
         assertEquals(config.getNodeSpec().getNodePort(), peer.getPort());
         assertEquals(config.getClientId(), peer.getClientId());

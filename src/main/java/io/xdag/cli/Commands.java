@@ -369,7 +369,7 @@ public class Commands {
                           XDAG in address: %s
                         4 hr hashrate KHs: %.9f of %.9f
                         Number of Address: %d""",
-                kernel.getNetDB().getSize(), kernel.getNetDBMgr().getWhiteDB().getSize(),
+                2, 2,
                 xdagStats.getNblocks(), Math.max(xdagStats.getTotalnblocks(), xdagStats.getNblocks()),
                 xdagStats.getNmain(), Math.max(xdagStats.getTotalnmain(), xdagStats.getNmain()),
                 xdagStats.nextra,

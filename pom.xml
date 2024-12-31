@@ -124,7 +124,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.2</version>
                 <configuration>
-                    <argLine>-Xmx2048m</argLine>
+                    <argLine>-Xmx4096m -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+UseStringDeduplication</argLine>
                     <excludes>
                         <exclude>${surefire.test.excludes}</exclude>
                     </excludes>

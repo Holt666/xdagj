@@ -36,9 +36,6 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.xdag.config.Config;
 import io.xdag.net.node.Node;
-import java.net.InetSocketAddress;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 
 import lombok.Getter;
@@ -55,7 +52,6 @@ import org.hyperledger.besu.crypto.KeyPair;
 @Setter
 public class PeerClient {
 
-    // Thread factory for client worker threads
     private static final ThreadFactory factory = new BasicThreadFactory.Builder()
             .namingPattern("XdagClient-thread-%d")
             .daemon(true)
@@ -66,7 +62,6 @@ public class PeerClient {
     private final KeyPair coinbase;
     private final EventLoopGroup workerGroup;
     private final Config config;
-    private final Set<InetSocketAddress> whitelist;
     private Node node;
 
     /**
@@ -80,8 +75,6 @@ public class PeerClient {
         this.port = config.getNodeSpec().getNodePort();
         this.coinbase = coinbase;
         this.workerGroup = new NioEventLoopGroup(0, factory);
-        this.whitelist = new HashSet<>();
-        initWhiteIPs();
     }
 
     /**
@@ -98,9 +91,6 @@ public class PeerClient {
      * @return ChannelFuture for the connection
      */
     public ChannelFuture connect(Node remoteNode, XdagChannelInitializer xdagChannelInitializer) {
-        if (!isAcceptable(new InetSocketAddress(remoteNode.getIp(), remoteNode.getPort()))) {
-            return null;
-        }
         Bootstrap b = new Bootstrap();
         b.group(workerGroup);
         b.channel(NioSocketChannel.class);
@@ -131,33 +121,4 @@ public class PeerClient {
         }
         return node;
     }
-
-    /**
-     * Check if an address is acceptable based on whitelist
-     * @param address Address to check
-     * @return true if address is acceptable
-     */
-    public boolean isAcceptable(InetSocketAddress address) {
-        if (!whitelist.isEmpty()) {
-            return whitelist.contains(address);
-        }
-        return true;
-    }
-
-    /**
-     * Initialize whitelist from config
-     */
-    private void initWhiteIPs() {
-        whitelist.addAll(config.getNodeSpec().getWhiteIPList());
-    }
-
-    /**
-     * Add an IP to the whitelist
-     * @param host Host address
-     * @param port Port number
-     */
-    public void addWhilteIP(String host, int port) {
-        whitelist.add(new InetSocketAddress(host, port));
-    }
-
 }

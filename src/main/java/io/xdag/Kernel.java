@@ -73,11 +73,9 @@ public class Kernel {
 
     protected SnapshotStore snapshotStore;
     protected Blockchain blockchain;
-    protected NetDB netDB;
     protected PeerClient client;
     protected ChannelManager channelMgr;
     protected NodeManager nodeMgr;
-    protected NetDBManager netDBMgr;
     protected PeerServer p2p;
     protected XdagSync sync;
     protected XdagPow pow;
@@ -131,9 +129,6 @@ public class Kernel {
         channelMgr = new ChannelManager(this);
         channelMgr.start();
 
-        netDBMgr = new NetDBManager(this.config);
-        netDBMgr.start();
-
         // Initialize database components
         dbFactory = new RocksdbFactory(this.config);
         blockStore = new BlockStoreImpl(
@@ -156,9 +151,6 @@ public class Kernel {
             txHistoryStore = new TransactionHistoryStoreImpl(txPageSizeLimit);
             log.info("Transaction History Store init.");
         }
-
-        // Initialize network components
-        netDB = new NetDB();
 
         // Initialize RandomX
         randomx = new RandomX(config);

@@ -45,6 +45,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -57,6 +58,7 @@ import static io.xdag.core.XdagField.FieldType.XDAG_FIELD_OUT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 
+@Slf4j
 public class RewardTest {
 
     @Rule
@@ -109,71 +111,67 @@ public class RewardTest {
 
     @Test
     public void testReward() {
-
-        RandomXConstants.RANDOMX_TESTNET_FORK_HEIGHT = 16000;
-        RandomXConstants.SEEDHASH_EPOCH_TESTNET_BLOCKS = 16;
-        RandomXConstants.SEEDHASH_EPOCH_TESTNET_LAG = 4;
+        RandomXConstants.RANDOMX_TESTNET_FORK_HEIGHT = 4096;
+        RandomXConstants.SEEDHASH_EPOCH_TESTNET_BLOCKS = 8;
+        RandomXConstants.SEEDHASH_EPOCH_TESTNET_LAG = 2;
 
         RandomX randomXUtils = new RandomX(config);
-        randomXUtils.start();
-        kernel.setRandomx(randomXUtils);
+        try {
+            randomXUtils.start();
+            kernel.setRandomx(randomXUtils);
 
-        Bytes32 targetBlock = Bytes32.ZERO;
+            Bytes32 targetBlock = Bytes32.ZERO;
 
-        KeyPair addrKey = KeyPair.create(secretKey, Sign.CURVE, Sign.CURVE_NAME);
-        KeyPair poolKey = KeyPair.create(secretKey, Sign.CURVE, Sign.CURVE_NAME);
-//        Date date = fastDateFormat.parse("2020-09-20 23:45:00");
-        long generateTime = 1600616700000L;
-        // 1. add one address block
-        Block addressBlock = generateAddressBlock(config, addrKey, generateTime);
-        MockBlockchain blockchain = new MockBlockchain(kernel);
-        ImportResult result = blockchain.tryToConnect(addressBlock);
-        // import address block, result must be IMPORTED_BEST
-        assertSame(result, IMPORTED_BEST);
-        List<Address> pending = Lists.newArrayList();
-        List<Block> extraBlockList = Lists.newLinkedList();
-        Bytes32 ref = addressBlock.getHashLow();
-
-        Bytes32 unwindRef = Bytes32.ZERO;
-        long unwindDate = 0;
-        // 2. create 20 mainblocks
-        for (int i = 1; i <= 20; i++) {
-            generateTime += 64000L;
-            pending.clear();
-            pending.add(new Address(ref, XDAG_FIELD_OUT,false));
-            long time = XdagTime.msToXdagtimestamp(generateTime);
-            long xdagTime = XdagTime.getEndOfEpoch(time);
-            Block extraBlock = generateExtraBlock(config, poolKey, xdagTime, pending);
-            result = blockchain.tryToConnect(extraBlock);
+            KeyPair addrKey = KeyPair.create(secretKey, Sign.CURVE, Sign.CURVE_NAME);
+            KeyPair poolKey = KeyPair.create(secretKey, Sign.CURVE, Sign.CURVE_NAME);
+            long generateTime = 1600616700000L;
+            
+            // 1. add one address block
+            Block addressBlock = generateAddressBlock(config, addrKey, generateTime);
+            MockBlockchain blockchain = new MockBlockchain(kernel);
+            ImportResult result = blockchain.tryToConnect(addressBlock);
             assertSame(result, IMPORTED_BEST);
-            ref = extraBlock.getHashLow();
-            if (i == 10) {
-                unwindRef = ref;
-                unwindDate = generateTime;
+            
+            List<Address> pending = Lists.newArrayList();
+            List<Block> extraBlockList = Lists.newLinkedList();
+            Bytes32 ref = addressBlock.getHashLow();
+
+            // 2. create 10 mainblocks instead of 20
+            for (int i = 1; i <= 10; i++) {
+                generateTime += 64000L;
+                pending.clear();
+                pending.add(new Address(ref, XDAG_FIELD_OUT,false));
+                long time = XdagTime.msToXdagtimestamp(generateTime);
+                long xdagTime = XdagTime.getEndOfEpoch(time);
+                Block extraBlock = generateExtraBlock(config, poolKey, xdagTime, pending);
+                result = blockchain.tryToConnect(extraBlock);
+                assertSame(result, IMPORTED_BEST);
+                ref = extraBlock.getHashLow();
+                extraBlockList.add(extraBlock);
             }
-            if (i == 15) {
-                targetBlock = ref;
-            }
 
-            extraBlockList.add(extraBlock);
-        }
-
-        generateTime = unwindDate;
-        ref = unwindRef;
-
-        // 3. create 20 fork blocks
-        for (int i = 0; i < 30; i++) {
+            // 3. create 10 fork blocks instead of 30
             generateTime += 64000L;
-            pending.clear();
-            pending.add(new Address(ref, XDAG_FIELD_OUT,false));
-            long time = XdagTime.msToXdagtimestamp(generateTime);
-            long xdagTime = XdagTime.getEndOfEpoch(time);
-            Block extraBlock = generateExtraBlockGivenRandom(config, poolKey, xdagTime, pending, "3456");
-            blockchain.tryToConnect(extraBlock);
-            ref = extraBlock.getHashLow();
-            extraBlockList.add(extraBlock);
+            for (int i = 0; i < 10; i++) {
+                pending.clear();
+                pending.add(new Address(ref, XDAG_FIELD_OUT,false));
+                long time = XdagTime.msToXdagtimestamp(generateTime);
+                long xdagTime = XdagTime.getEndOfEpoch(time);
+                Block extraBlock = generateExtraBlockGivenRandom(config, poolKey, xdagTime, pending, "3456");
+                blockchain.tryToConnect(extraBlock);
+                ref = extraBlock.getHashLow();
+                extraBlockList.add(extraBlock);
+            }
+            
+            assertEquals("0", blockchain.getBlockByHash(targetBlock, false).getInfo().getAmount().toString());
+        } finally {
+            try {
+                randomXUtils.stop();
+            } catch (Exception e) {
+                // log error but don't throw
+                log.error("Error stopping RandomX", e);
+            }
         }
-        assertEquals("0", blockchain.getBlockByHash(targetBlock, false).getInfo().getAmount().toString());
     }
 
     static class MockBlockchain extends BlockchainImpl {

@@ -26,6 +26,7 @@ package io.xdag.net;
 import io.xdag.Network;
 import lombok.Getter;
 import lombok.Setter;
+import org.hyperledger.besu.crypto.SECPPublicKey;
 
 /**
  * Represents a peer node in the XDAG network
@@ -41,6 +42,8 @@ public class Peer {
     
     // Unique identifier for this peer
     private final String peerId;
+
+    private final SECPPublicKey publicKey;
     
     // IP address of the peer
     private final String ip;
@@ -74,12 +77,13 @@ public class Peer {
      * @param capabilities Supported capabilities
      * @param latestBlockNumber Latest known block number
      */
-    public Peer(Network network, short networkVersion, String peerId, String ip, int port, String clientId,
-            String[] capabilities, long latestBlockNumber) {
+    public Peer(Network network, short networkVersion, String peerId, SECPPublicKey publicKey, String ip, int port, String clientId,
+                String[] capabilities, long latestBlockNumber) {
         this.network = network;
         this.ip = ip;
         this.port = port;
         this.peerId = peerId;
+        this.publicKey = publicKey;
         this.networkVersion = networkVersion;
         this.clientId = clientId;
         this.capabilities = capabilities;

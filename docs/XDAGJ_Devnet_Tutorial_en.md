@@ -77,7 +77,7 @@
 
 ## Modify pool config
 
-The configuration file is located in `src/main/resources/xdag-devnet.conf`, the specific meaning is as follows, if you do not modify it, the default configuration is enabled. The whitelist of XDAGJ is an optional mode. If the configuration item is empty, all nodes are allowed to join, and only the corresponding ip access is allowed after restriction
+The configuration file is located in `src/main/resources/xdag-devnet.conf`, the specific meaning is as follows, if you do not modify it, the default configuration is enabled. The authorized addresses list of XDAGJ is an optional mode. If the configuration item is empty, all nodes are allowed to join, and only the corresponding ip access is allowed after restriction
 
 ```yaml
 # Admin Config

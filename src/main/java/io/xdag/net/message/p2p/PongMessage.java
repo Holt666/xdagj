@@ -31,14 +31,17 @@ import io.xdag.utils.SimpleDecoder;
 public class PongMessage extends Message {
 
     private final long timestamp;
+    private final boolean isValid;
 
-    public PongMessage() {
+    public PongMessage(boolean isValid) {
         super(MessageCode.PONG, null);
 
         this.timestamp = System.currentTimeMillis();
+        this.isValid = isValid;
 
         SimpleEncoder enc = new SimpleEncoder();
         enc.writeLong(timestamp);
+        enc.writeBoolean(isValid);
         this.body = enc.toBytes();
     }
 
@@ -47,12 +50,17 @@ public class PongMessage extends Message {
 
         SimpleDecoder dec = new SimpleDecoder(body);
         this.timestamp = dec.readLong();
+        this.isValid = dec.readBoolean();
 
         this.body = body;
     }
 
+    public boolean isValid() {
+        return isValid;
+    }
+
     @Override
     public String toString() {
-        return "PongMessage [timestamp=" + timestamp + "]";
+        return "PongMessage [timestamp=" + timestamp + ", isValid=" + isValid + "]";
     }
 }

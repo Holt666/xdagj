@@ -26,6 +26,7 @@ package io.xdag.config.spec;
 
 import io.xdag.Network;
 import io.xdag.net.message.MessageCode;
+import io.xdag.net.node.Node;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -65,16 +66,15 @@ public interface NodeSpec {
     int getTTL();
     int getAwardEpoch();
 
-    // Whitelist management
-    List<InetSocketAddress> getWhiteIPList();
-    void setWhiteIPList(List<InetSocketAddress> list);
+    // Authorized addresses management
+    List<InetSocketAddress> getAuthorizedAddresses();
+    void setAuthorizedAddresses(List<InetSocketAddress> list);
 
     // Storage configuration
     String getStoreDir();
     void setStoreDir(String dir);
     String getStoreBackupDir();
     void setStoreBackupDir(String dir);
-    String getWhiteListDir();
     String getNetDBDir();
     int getStoreMaxOpenFiles();
     int getStoreMaxThreads();
@@ -88,5 +88,9 @@ public interface NodeSpec {
     
     // There appears to be a typo in method name - should be "getNodeRatio"
     double getNodeRation();
+
+    List<Node> getSeedNodes();
+    List<String> getDnsSeedsMainNet();
+    List<String> getDnsSeedsTestNet();
 
 }

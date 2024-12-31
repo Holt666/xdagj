@@ -92,7 +92,7 @@ public class MessageQueue {
     }
 
     public void sendMessage(Message msg) {
-    //when full message queue, whitelist don't need to disconnect.
+    //when full message queue, authorized addresses don't need to disconnect.
         if (config.getNodeSpec().getNetPrioritizedMessages().contains(msg.getCode())) {
             prioritized.add(msg);
         } else {

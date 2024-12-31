@@ -66,15 +66,15 @@ public enum MessageCode {
      */
     PONG(0x05),
 
-//    /**
-//     * [0x06] Request peer to provide a list of known nodes.
-//     */
-//    GET_NODES(0x06),
-//
-//    /**
-//     * [0x07] Response to a GET_NODES message.
-//     */
-//    NODES(0x07),
+    /**
+     * [0x06] Request peer to provide a list of known nodes.
+     */
+    GET_NODES(0x06),
+
+    /**
+     * [0x07] Response to a GET_NODES message.
+     */
+    NODES(0x07),
 
     // =======================================
     // [0x10, 0x1f] Reserved for node

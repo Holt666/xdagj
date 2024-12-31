@@ -24,18 +24,19 @@
 
 package io.xdag.config;
 
+import io.xdag.Network;
 import io.xdag.config.spec.*;
 import io.xdag.core.XAmount;
 import io.xdag.core.XdagField;
 import io.xdag.net.CapabilityTreeSet;
-
-import java.util.List;
 
 /**
  * Interface for XDAG blockchain configurations.
  * Provides methods to access various configuration settings and specifications.
  */
 public interface Config {
+
+    Network getNetwork();
 
     /**
      * Get the configuration file name
@@ -136,11 +137,6 @@ public interface Config {
      * Get the transaction page size limit
      */
     long getTxPageSizeLimit();
-
-    /**
-     * Get the pool whitelist IP addresses
-     */
-    List<String> getPoolWhiteIPList();
 
     /**
      * Get the websocket server port
