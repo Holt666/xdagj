@@ -43,7 +43,7 @@ public class NodeInfoTest {
 
     @Test(expected = RuntimeException.class)
     public void testCreateWithNullIp() {
-        NodeInfo.create(null, keyPair);
+        NodeInfo.create((String)null, keyPair);
     }
 
     @Test(expected = RuntimeException.class)

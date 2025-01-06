@@ -416,18 +416,30 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
     }
 
     @Override
-    public List<Node> getSeedNodes() {
+    public List<String> getSeedNodesDns(Network network) {
+        List<String> seeds = Lists.newArrayList();
+        switch (network) {
+            case MAINNET:{
+                seeds.add("mainnet-seed.xdag.io");
+                break;
+            }
+            case TESTNET: {
+                seeds.add("testnet-seed.xdag.io");
+                break;
+            }
+            case DEVNET: {
+                seeds.add("devnet-seed.xdag.io");
+                break;
+            }
+            default:
+                break;
+        }
+        return seeds;
+    }
+
+    @Override
+    public List<Node> getSeedNodesFromLocal(Network network){
         return seedNodes;
-    }
-
-    @Override
-    public List<String> getDnsSeedsMainNet() {
-        return Arrays.asList("mainnet-seed.xdag.io");
-    }
-
-    @Override
-    public List<String> getDnsSeedsTestNet() {
-        return Arrays.asList("testnet-seed.xdag.io");
     }
 
     @Override

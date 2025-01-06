@@ -27,24 +27,20 @@ import io.xdag.utils.SimpleEncoder;
 import io.xdag.net.message.Message;
 import io.xdag.net.message.MessageCode;
 import io.xdag.utils.SimpleDecoder;
-import io.xdag.net.node.NodeInfo;
 import lombok.Getter;
 
 @Getter
 public class PingMessage extends Message {
 
     private final long timestamp;
-    private final NodeInfo nodeInfo;
 
-    public PingMessage(NodeInfo nodeInfo) {
+    public PingMessage() {
         super(MessageCode.PING, PongMessage.class);
 
         this.timestamp = System.currentTimeMillis();
-        this.nodeInfo = nodeInfo;
 
         SimpleEncoder enc = new SimpleEncoder();
         enc.writeLong(timestamp);
-        enc.writeBytes(nodeInfo.toBytes());
         this.body = enc.toBytes();
     }
 
@@ -53,13 +49,12 @@ public class PingMessage extends Message {
 
         SimpleDecoder dec = new SimpleDecoder(body);
         this.timestamp = dec.readLong();
-        this.nodeInfo = NodeInfo.fromBytes(dec.readBytes());
 
         this.body = body;
     }
 
     @Override
     public String toString() {
-        return "PingMessage [timestamp=" + timestamp + ", nodeInfo=" + nodeInfo + "]";
+        return "PingMessage [timestamp=" + timestamp + "]";
     }
 }

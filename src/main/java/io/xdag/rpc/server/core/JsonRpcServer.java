@@ -50,19 +50,37 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * JSON-RPC server implementation using Netty framework.
+ * Handles incoming JSON-RPC requests and routes them to appropriate handlers.
+ */
 public class JsonRpcServer {
+    // Configuration for RPC server
     private final RPCSpec rpcSpec;
+    // API implementation for handling Xdag specific requests
     private final XdagApi xdagApi;
+    // Netty channel for server communication
     private Channel channel;
+    // Event loop group for accepting connections
     private EventLoopGroup bossGroup;
+    // Event loop group for handling connections
     private EventLoopGroup workerGroup;
 
-
+    /**
+     * Constructs a new JsonRpcServer instance.
+     * @param rpcSpec RPC configuration specifications
+     * @param xdagApi Xdag API implementation
+     */
     public JsonRpcServer(final RPCSpec rpcSpec, final XdagApi xdagApi) {
         this.rpcSpec = rpcSpec;
         this.xdagApi = xdagApi;
     }
 
+    /**
+     * Starts the JSON-RPC server.
+     * Initializes handlers, SSL context, and starts listening for incoming connections.
+     * @throws RuntimeException if server fails to start
+     */
     public void start() {
         try {
             // Create request handlers
@@ -82,10 +100,11 @@ public class JsonRpcServer {
                 sslCtx = null;
             }
 
-            // Create event loop groups
+            // Create event loop groups with configured thread counts
             bossGroup = new NioEventLoopGroup(rpcSpec.getRpcHttpBossThreads());
             workerGroup = new NioEventLoopGroup(rpcSpec.getRpcHttpWorkerThreads());
 
+            // Configure server bootstrap
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
@@ -96,22 +115,23 @@ public class JsonRpcServer {
                         protected void initChannel(SocketChannel ch) {
                             ChannelPipeline p = ch.pipeline();
                             
-                            // SSL
+                            // Add SSL handler if HTTPS is enabled
                             if (sslCtx != null) {
                                 p.addLast(sslCtx.newHandler(ch.alloc()));
                             }
 
-                            // HTTP codec
+                            // Add HTTP codec for encoding/decoding HTTP messages
                             p.addLast(new HttpServerCodec());
-                            // HTTP message aggregator
+                            // Add aggregator for combining HTTP message fragments
                             p.addLast(new HttpObjectAggregator(rpcSpec.getRpcHttpMaxContentLength()));
-                            // CORS handler
+                            // Add CORS handler for cross-origin requests
                             p.addLast(new CorsHandler(rpcSpec.getRpcHttpCorsOrigins()));
-                            // JSON-RPC handler
+                            // Add JSON-RPC handler for processing requests
                             p.addLast(new JsonRpcHandler(rpcSpec, handlers));
                         }
                     });
 
+            // Bind to configured host and port
             channel = b.bind(InetAddress.getByName(rpcSpec.getRpcHttpHost()), rpcSpec.getRpcHttpPort()).sync().channel();
         } catch (Exception e) {
             stop();
@@ -119,6 +139,10 @@ public class JsonRpcServer {
         }
     }
 
+    /**
+     * Stops the JSON-RPC server.
+     * Closes the channel and shuts down event loop groups gracefully.
+     */
     public void stop() {
         if (channel != null) {
             channel.close();

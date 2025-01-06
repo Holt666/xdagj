@@ -89,8 +89,6 @@ public interface NodeSpec {
     // There appears to be a typo in method name - should be "getNodeRatio"
     double getNodeRation();
 
-    List<Node> getSeedNodes();
-    List<String> getDnsSeedsMainNet();
-    List<String> getDnsSeedsTestNet();
-
+    List<String> getSeedNodesDns(Network network);
+    List<Node> getSeedNodesFromLocal(Network network);
 }

@@ -161,7 +161,7 @@ public class BlockchainTest {
             if (link.getType() == XDAG_FIELD_INPUT){assertEquals(WalletUtils.toBase58(link.getAddress().slice(8, 20).toArray()), "AavSCZUxXbySZXjXcb3mwr5CzwabQXP2A");}
             if (link.getType() == XDAG_FIELD_OUTPUT){assertEquals(WalletUtils.toBase58(link.getAddress().slice(8, 20).toArray()), "8FfenZ1xewHGa3Ydx9zhppgou1hgesX97");}
         }
-        assertEquals(kernel.getConfig().getNodeSpec().getRejectAddress(), "111111111111111111117K4nzc"); //默认为空
+        assertEquals(kernel.getConfig().getNodeSpec().getRejectAddress(), ""); //默认为空
     }
 
     @Test

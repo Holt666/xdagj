@@ -25,19 +25,57 @@ package io.xdag.net.message.p2p;
 
 import io.xdag.net.message.Message;
 import io.xdag.net.message.MessageCode;
+import io.xdag.net.node.NodeInfo;
+import io.xdag.utils.SimpleDecoder;
+import io.xdag.utils.SimpleEncoder;
+import lombok.Getter;
 
 /**
- * Request peer to provide a list of known nodes and authorized addresses
+ * Request peer to provide a list of known nodes and authorized addresses.
+ * The nodeInfo in this message is used to update the authorized address to IP bindings.
+ * If the nodeInfo has changed, the previous connection should be closed and the bindings should be updated.
  */
+@Getter
 public class GetNodesMessage extends Message {
 
-    public GetNodesMessage() {
+    /**
+     * -- GETTER --
+     *  Get the node info for updating authorized address bindings
+     *
+     * @return The node info containing IP and public key
+     */
+    private final NodeInfo nodeInfo;
+
+    /**
+     * Create a new GetNodesMessage with node info for updating authorized address bindings
+     *
+     * @param nodeInfo The node info containing the latest IP and public key for authorization
+     */
+    public GetNodesMessage(NodeInfo nodeInfo) {
         super(MessageCode.GET_NODES, NodesMessage.class);
-        this.body = new byte[0];
+        this.nodeInfo = nodeInfo;
+        
+        SimpleEncoder enc = encode();
+        this.body = enc.toBytes();
     }
 
+    /**
+     * Create a GetNodesMessage from received bytes
+     *
+     * @param body The received message body
+     */
     public GetNodesMessage(byte[] body) {
         super(MessageCode.GET_NODES, NodesMessage.class);
         this.body = body;
+        
+        SimpleDecoder dec = new SimpleDecoder(body);
+        this.nodeInfo = NodeInfo.fromBytes(dec.readBytes());
     }
-} 
+
+    protected SimpleEncoder encode() {
+        SimpleEncoder enc = new SimpleEncoder();
+        enc.writeBytes(nodeInfo.toBytes());
+        return enc;
+    }
+
+}

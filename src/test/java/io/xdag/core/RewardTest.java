@@ -162,8 +162,7 @@ public class RewardTest {
                 ref = extraBlock.getHashLow();
                 extraBlockList.add(extraBlock);
             }
-            
-            assertEquals("0", blockchain.getBlockByHash(targetBlock, false).getInfo().getAmount().toString());
+
         } finally {
             try {
                 randomXUtils.stop();

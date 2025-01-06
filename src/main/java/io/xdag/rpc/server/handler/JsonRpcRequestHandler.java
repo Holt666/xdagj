@@ -26,21 +26,25 @@ package io.xdag.rpc.server.handler;
 import io.xdag.rpc.error.JsonRpcException;
 import io.xdag.rpc.server.protocol.JsonRpcRequest;
 
+/**
+ * Interface for handling JSON-RPC requests.
+ * Implementations of this interface are responsible for processing specific JSON-RPC methods.
+ */
 public interface JsonRpcRequestHandler {
     /**
-     * 处理RPC请求
+     * Handles a JSON-RPC request and returns the processing result.
      *
-     * @param request RPC请求
-     * @return 处理结果
-     * @throws JsonRpcException 如果处理过程中出现错误
+     * @param request The JSON-RPC request to be processed
+     * @return The result of processing the request
+     * @throws JsonRpcException If an error occurs during request processing
      */
     Object handle(JsonRpcRequest request) throws JsonRpcException;
 
     /**
-     * 检查方法是否支持
+     * Checks if the handler supports the specified method name.
      *
-     * @param methodName 方法名
-     * @return 如果支持返回true
+     * @param methodName The name of the method to check
+     * @return true if the method is supported, false otherwise
      */
     boolean supportsMethod(String methodName);
 }

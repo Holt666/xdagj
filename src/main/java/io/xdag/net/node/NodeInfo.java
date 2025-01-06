@@ -26,6 +26,7 @@ package io.xdag.net.node;
 import io.xdag.crypto.Hash;
 import io.xdag.crypto.Keys;
 import io.xdag.crypto.Sign;
+import io.xdag.utils.BytesUtils;
 import io.xdag.utils.SimpleDecoder;
 import io.xdag.utils.SimpleEncoder;
 import io.xdag.utils.WalletUtils;
@@ -62,6 +63,19 @@ public class NodeInfo {
     private final SECPPublicKey publicKey;
     private final SECPSignature signature;
     private final long timestamp;
+
+    public static NodeInfo create(String ip, KeyPair keyPair) {
+        if (ip == null || ip.isEmpty()) {
+            throw new RuntimeException("IP address cannot be null or empty");
+        }
+        
+        byte[] ipBytes = BytesUtils.parseIpString(ip);
+        if (ipBytes == null) {
+            throw new RuntimeException("Invalid IP address format");
+        }
+        
+        return create(ipBytes, keyPair);
+    }
 
     /**
      * Create a new NodeInfo with signature

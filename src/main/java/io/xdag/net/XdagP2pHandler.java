@@ -26,7 +26,6 @@ package io.xdag.net;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.xdag.Kernel;
-import io.xdag.Network;
 import io.xdag.config.Config;
 import io.xdag.config.spec.NodeSpec;
 import io.xdag.consensus.SyncManager;
@@ -47,8 +46,6 @@ import io.xdag.utils.exception.UnreachableException;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.util.encoders.Hex;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -175,7 +172,7 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
         case HANDSHAKE_INIT -> onHandshakeInit((InitMessage) msg);
         case HANDSHAKE_HELLO -> onHandshakeHello((HelloMessage) msg);
         case HANDSHAKE_WORLD -> onHandshakeWorld((WorldMessage) msg);
-        case GET_NODES -> onGetNodes();
+        case GET_NODES -> onGetNodes((GetNodesMessage)msg);
         case NODES -> onNodes((NodesMessage) msg);
 
         /* sync */
@@ -297,7 +294,7 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
     protected void onPing(PingMessage msg) {
         // No need to validate address here since it was done during handshake
         lastPing = System.currentTimeMillis();
-        msgQueue.sendMessage(new PongMessage(true)); // Always send true since validation was done during handshake
+        msgQueue.sendMessage(new PongMessage()); // Always send true since validation was done during handshake
     }
 
     protected void onPong(PongMessage msg) {
@@ -348,55 +345,70 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
             // register into channel manager
             channelMgr.onChannelActive(channel, peer);
 
-            // start ping pong with local node info
-            pingPong = exec.scheduleAtFixedRate(() -> {
-                // Create NodeInfo from local node
-                Node localNode = client.getNode();
-                try {
-                    byte[] ip = InetAddress.getByName(localNode.getIp()).getAddress();
-                    NodeInfo nodeInfo = NodeInfo.create(ip, client.getCoinbase());
-                    msgQueue.sendMessage(new PingMessage(nodeInfo));
-                } catch (UnknownHostException e) {
-                    log.error("Failed to create NodeInfo", e);
-                }
-            }, channel.isInbound() ? 1 : 0, 1, TimeUnit.MINUTES);
+            // start peers exchange
+            getNodes = exec.scheduleAtFixedRate(() -> msgQueue.sendMessage(new GetNodesMessage(NodeInfo.create(config.getNodeSpec().getNodeIp(), kernel.getCoinbase()))),
+                    channel.isInbound() ? 2 : 0, 2, TimeUnit.MINUTES);
+
+            // start ping pong
+            pingPong = exec.scheduleAtFixedRate(() -> msgQueue.sendMessage(new PingMessage()),
+                    channel.isInbound() ? 1 : 0, 1, TimeUnit.MINUTES);
+
         } else {
             msgQueue.disconnect(ReasonCode.HANDSHAKE_EXISTS);
         }
     }
 
-    protected void onGetNodes() {
+    protected void onGetNodes(GetNodesMessage msg) {
         if (!isHandshakeDone.get()) {
             return;
         }
 
-        List<Channel> activeChannels = channelMgr.getActiveChannels();
-        List<NodeInfo> nodes = Lists.newArrayList();
-        
-        // Convert active channels to NodeInfo objects
-        for (Channel c : activeChannels) {
-            Peer p = c.getRemotePeer();
-            if (p != null) {
-                byte[] ip = parseIpString(p.getIp());
-                if (ip != null) {
-                    NodeInfo nodeInfo = NodeInfo.create(ip, client.getCoinbase());
+        // Process nodeInfo for authorized address binding updates if provided
+        NodeInfo newNodeInfo = msg.getNodeInfo();
+        if (newNodeInfo != null) {
+            try {
+                if (!nodeMgr.processNodeInfo(newNodeInfo)) {
+                    log.warn("Failed to process node info from {}", channel.getRemoteAddress());
+                    // Don't return here, still need to send nodes response
+                }
+            } catch (Exception e) {
+                log.error("Error processing node info from {}", channel.getRemoteAddress(), e);
+                // Don't return here, still need to send nodes response
+            }
+        }
+
+        try {
+            // Collect active nodes
+            List<Channel> activeChannels = channelMgr.getActiveChannels();
+            List<NodeInfo> nodes = Lists.newArrayList();
+            
+            // Convert active channels to NodeInfo objects
+            for (Channel c : activeChannels) {
+                // Skip the requesting node
+                if (c.equals(channel)) {
+                    continue;
+                }
+                
+                Peer p = c.getRemotePeer();
+                if (p != null && c.isActive()) {
+                    NodeInfo nodeInfo = NodeInfo.create(p.getIp(), client.getCoinbase());
                     nodes.add(nodeInfo);
                 }
             }
+            
+            // Only include authorized addresses if this is a DNS seed node
+            Set<String> authorizedAddresses = null;
+            Node localNode = client.getNode();
+            if (nodeMgr.isSeedNode(localNode)) {
+                authorizedAddresses = nodeMgr.getAuthorizedAddresses();
+            }
+            
+            // Send nodes message
+            msgQueue.sendMessage(new NodesMessage(nodes, authorizedAddresses));
+            
+        } catch (Exception e) {
+            log.error("Error creating nodes response for {}", channel.getRemoteAddress(), e);
         }
-        
-        // Only include authorized addresses if this is a DNS seed node
-        Set<String> authorizedAddresses = null;
-        String localIp = client.getNode().getIp();
-        List<String> dnsSeeds = nodeSpec.getNetwork() == Network.MAINNET ? 
-                nodeSpec.getDnsSeedsMainNet() : nodeSpec.getDnsSeedsTestNet();
-        
-        if (dnsSeeds.contains(localIp)) {
-            authorizedAddresses = nodeMgr.getAuthorizedAddresses();
-        }
-        
-        // Send nodes message
-        msgQueue.sendMessage(new NodesMessage(nodes, authorizedAddresses));
     }
 
     protected void onNodes(NodesMessage msg) {
@@ -404,24 +416,11 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
             return;
         }
 
-        // Process the nodes message with sender IP
-        nodeMgr.processNodes(msg, channel.getRemoteIp());
-    }
-
-    private byte[] parseIpString(String ipString) {
         try {
-            String[] parts = ipString.split("\\.");
-            if (parts.length != 4) {
-                return null;
-            }
-            byte[] bytes = new byte[4];
-            for (int i = 0; i < 4; i++) {
-                bytes[i] = (byte) Integer.parseInt(parts[i]);
-            }
-            return bytes;
+            // Process the nodes message with sender IP
+            nodeMgr.processNodes(msg, channel.getRemoteIp());
         } catch (Exception e) {
-            log.warn("Failed to parse IP string: {}", ipString);
-            return null;
+            log.error("Failed to process nodes message from {}", channel.getRemoteAddress(), e);
         }
     }
 

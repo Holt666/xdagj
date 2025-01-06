@@ -448,4 +448,16 @@ public class BytesUtils {
     public static UnsignedLong long2UnsignedLong(long number) {
         return UnsignedLong.valueOf(toHexString((ByteBuffer.allocate(8).putLong(number).array())),16);
     }
+
+    public static byte[] parseIpString(String ipString) {
+        String[] parts = ipString.split("\\.");
+        if (parts.length != 4) {
+            return null;
+        }
+        byte[] bytes = new byte[4];
+        for (int i = 0; i < 4; i++) {
+            bytes[i] = (byte) Integer.parseInt(parts[i]);
+        }
+        return bytes;
+    }
 }
