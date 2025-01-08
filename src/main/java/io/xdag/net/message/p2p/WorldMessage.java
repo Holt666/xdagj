@@ -56,6 +56,7 @@ public class WorldMessage extends HandshakeMessage {
                 ", latestBlockNumber=" + latestBlockNumber +
                 ", secret=" + Bytes.wrap(secret).toHexString() +
                 ", timestamp=" + timestamp +
+                ", signature=" + signature.encodedBytes().toHexString() +
                 '}';
     }
 }

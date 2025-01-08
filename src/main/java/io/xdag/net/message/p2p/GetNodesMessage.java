@@ -25,8 +25,6 @@ package io.xdag.net.message.p2p;
 
 import io.xdag.net.message.Message;
 import io.xdag.net.message.MessageCode;
-import io.xdag.net.node.NodeInfo;
-import io.xdag.utils.SimpleDecoder;
 import io.xdag.utils.SimpleEncoder;
 import lombok.Getter;
 
@@ -39,43 +37,30 @@ import lombok.Getter;
 public class GetNodesMessage extends Message {
 
     /**
-     * -- GETTER --
-     *  Get the node info for updating authorized address bindings
+     * Create a GET_NODES message.
      *
-     * @return The node info containing IP and public key
      */
-    private final NodeInfo nodeInfo;
-
-    /**
-     * Create a new GetNodesMessage with node info for updating authorized address bindings
-     *
-     * @param nodeInfo The node info containing the latest IP and public key for authorization
-     */
-    public GetNodesMessage(NodeInfo nodeInfo) {
+    public GetNodesMessage() {
         super(MessageCode.GET_NODES, NodesMessage.class);
-        this.nodeInfo = nodeInfo;
-        
-        SimpleEncoder enc = encode();
+
+        SimpleEncoder enc = new SimpleEncoder();
         this.body = enc.toBytes();
     }
 
     /**
-     * Create a GetNodesMessage from received bytes
+     * Parse a GET_NODES message from byte array.
      *
-     * @param body The received message body
+     * @param body
      */
     public GetNodesMessage(byte[] body) {
         super(MessageCode.GET_NODES, NodesMessage.class);
+
         this.body = body;
-        
-        SimpleDecoder dec = new SimpleDecoder(body);
-        this.nodeInfo = NodeInfo.fromBytes(dec.readBytes());
     }
 
-    protected SimpleEncoder encode() {
-        SimpleEncoder enc = new SimpleEncoder();
-        enc.writeBytes(nodeInfo.toBytes());
-        return enc;
+    @Override
+    public String toString() {
+        return "GetNodesMessage";
     }
 
 }

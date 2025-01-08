@@ -56,7 +56,7 @@ public class HelloMessageTest {
         assertTrue(msg.validate(config));
 
         String ip = "127.0.0.2";
-        Peer peer = msg.getPeer(ip, key.getPublicKey());
+        Peer peer = msg.getPeer(ip);
         assertEquals(config.getNodeSpec().getNetwork(), peer.getNetwork());
         assertEquals(config.getNodeSpec().getNetworkVersion(), peer.getNetworkVersion());
         assertEquals(toBase58(Keys.toBytesAddress(key)), peer.getPeerId());

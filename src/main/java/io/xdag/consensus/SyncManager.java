@@ -32,7 +32,8 @@ import io.xdag.db.TransactionHistoryStore;
 import io.xdag.net.Channel;
 import io.xdag.net.ChannelManager;
 import io.xdag.net.Peer;
-import io.xdag.net.node.Node;
+import io.xdag.net.NodeManager.Node;
+import io.xdag.net.message.consensus.NewBlockMessage;
 import io.xdag.utils.XdagTime;
 import lombok.Getter;
 import lombok.Setter;
@@ -373,7 +374,12 @@ public class SyncManager extends AbstractXdagLifecycle {
     }
 
     public void distributeBlock(BlockWrapper blockWrapper) {
-        channelMgr.onNewForeignBlock(blockWrapper);
+        Config config = kernel.getConfig();
+        List<Channel> activeSeedNodes = channelMgr.getActiveChannels(config.getNodeSpec().getSeedNodesAddresses(config.getNetwork()));
+        for (Channel channel : activeSeedNodes) {
+            NewBlockMessage msg = new NewBlockMessage(blockWrapper.getBlock(), blockWrapper.getTtl());
+            channel.getMsgQueue().sendMessage(msg);
+        }
     }
 
     private class StateListener implements Runnable {

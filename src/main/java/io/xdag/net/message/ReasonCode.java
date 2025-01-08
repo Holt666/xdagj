@@ -59,9 +59,9 @@ public enum ReasonCode {
     MESSAGE_QUEUE_FULL(0x05),
 
     /**
-     * [0x06] Another validator peer tries to connect using the same IP.
+     * [0x06] Another seed peer tries to connect using the same IP.
      */
-    VALIDATOR_IP_LIMITED(0x06),
+    SEED_IP_LIMITED(0x06),
 
     /**
      * [0x07] The peer tries to re-handshake.
@@ -71,12 +71,7 @@ public enum ReasonCode {
     /**
      * [0x08] The manifests malicious behavior.
      */
-    BAD_PEER(0x08),
-
-    /**
-     * [0x09] Invalid address-IP binding.
-     */
-    INVALID_ADDRESS_IP(0x09);
+    BAD_PEER(0x08);
 
     private final int code;
 

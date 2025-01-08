@@ -24,88 +24,63 @@
 
 package io.xdag.net;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import io.xdag.Kernel;
-import io.xdag.core.AbstractXdagLifecycle;
-import io.xdag.core.BlockWrapper;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
 
-import io.xdag.crypto.Keys;
-import io.xdag.utils.WalletUtils;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class ChannelManager extends AbstractXdagLifecycle {
+public class ChannelManager {
 
     private final Kernel kernel;
-    /**
-     * Queue with new blocks from other peers
-     */
-    private final BlockingQueue<BlockWrapper> newForeignBlocks = new LinkedBlockingQueue<>();
-    // Thread for block distribution
-    private final Thread blockDistributeThread;
-    protected ConcurrentHashMap<InetSocketAddress, Channel> channels = new ConcurrentHashMap<>();
+
+    protected final ConcurrentHashMap<InetSocketAddress, Channel> channels = new ConcurrentHashMap<>();
+
     protected ConcurrentHashMap<String, Channel> activeChannels = new ConcurrentHashMap<>();
-    private static final int LRU_CACHE_SIZE = 1024;
-
-    @Getter
-    private final Cache<InetSocketAddress, Long> channelLastConnect = Caffeine.newBuilder().maximumSize(LRU_CACHE_SIZE).build();
-
-    @Getter
-    private final Set<InetSocketAddress> addressSet = new HashSet<>();
 
     public ChannelManager(Kernel kernel) {
         this.kernel = kernel;
-        // Resending new blocks to network in loop
-        this.blockDistributeThread = new Thread(this::newBlocksDistributeLoop, "NewSyncThreadBlocks");
     }
 
-    @Override
-    protected void doStart() {
-        blockDistributeThread.start();
-    }
-
-    @Override
-    protected void doStop() {
-        log.debug("Channel Manager stop...");
-        if (blockDistributeThread != null) {
-            // Interrupt the thread
-            blockDistributeThread.interrupt();
-        }
-        // Close all connections
-        for (Channel channel : activeChannels.values()) {
-            channel.close();
-        }
-    }
-
-    public boolean isAcceptable(InetSocketAddress address) {
-        // For incoming connections, only check IP, not port
-        if (!addressSet.isEmpty()) {
-            for (InetSocketAddress inetSocketAddress : addressSet) {
-                // Don't connect to self
-                if (!isSelfAddress(address) && inetSocketAddress.getAddress().equals(address.getAddress())) {
-                    return true;
-                }
+    public boolean isActiveIP(String ip) {
+        for (Channel c : activeChannels.values()) {
+            if (c.getRemoteIp().equals(ip)) {
+                return true;
             }
         }
+
         return false;
+    }
+
+    public boolean isActivePeer(String peerId) {
+        return activeChannels.containsKey(peerId);
     }
 
     public int size() {
         return channels.size();
     }
 
+    /**
+     * Close all open channels
+     */
+    private void closeAllChannels() {
+        for (Channel channel : channels.values()) {
+            try {
+                channel.close();
+            } catch (Exception e) {
+                log.warn("Failed to close channel: {}", channel.getRemoteAddress(), e);
+            }
+        }
+        channels.clear();
+    }
+
     public void add(Channel ch) {
-        log.debug("xdag channel manager->Channel added: remoteAddress = {}:{}", ch.getRemoteIp(), ch.getRemotePort());
+        log.debug("Channel added: remoteAddress = {}:{}", ch.getRemoteIp(), ch.getRemotePort());
         channels.put(ch.getRemoteAddress(), ch);
     }
 
@@ -119,65 +94,60 @@ public class ChannelManager extends AbstractXdagLifecycle {
         }
     }
 
+    /**
+     * Activate a channel with peer information
+     */
     public void onChannelActive(Channel channel, Peer peer) {
         channel.setActive(peer);
         activeChannels.put(peer.getPeerId(), channel);
-        log.debug("activeChannel size:{}", activeChannels.size());
+    }
+
+    public List<Peer> getActivePeers() {
+        List<Peer> list = new ArrayList<>();
+
+        for (Channel c : activeChannels.values()) {
+            list.add(c.getRemotePeer());
+        }
+
+        return list;
     }
 
     public Set<InetSocketAddress> getActiveAddresses() {
-        Set<InetSocketAddress> set = new HashSet<>();
-
-        for (Channel c : activeChannels.values()) {
-            Peer p = c.getRemotePeer();
-            set.add(new InetSocketAddress(p.getIp(), p.getPort()));
+        Set<InetSocketAddress> activeAddresses = new HashSet<>();
+        for (Channel channel : channels.values()) {
+            if (channel.isActive() && channel.getRemotePeer() != null) {
+                Peer peer = channel.getRemotePeer();
+                activeAddresses.add(new InetSocketAddress(peer.getIp(), peer.getPort()));
+            }
         }
-
-        return set;
+        return activeAddresses;
     }
 
     public List<Channel> getActiveChannels() {
         return new ArrayList<>(activeChannels.values());
     }
 
-    /**
-     * Processing new blocks received from other peers from queue
-     */
-    private void newBlocksDistributeLoop() {
-        while (!Thread.currentThread().isInterrupted()) {
-            BlockWrapper wrapper = null;
-            try {
-                wrapper = newForeignBlocks.take();
-                log.debug("no problem..");
-                sendNewBlock(wrapper);
-            } catch (InterruptedException e) {
-                break;
-            } catch (Throwable e) {
-                if (wrapper != null) {
-                    log.error("Block dump: {}", wrapper.getBlock(),e);
-                } else {
-                    log.error("Error broadcasting unknown block", e);
-                }
+    public List<Channel> getActiveChannels(List<String> peerIds) {
+        List<Channel> list = new ArrayList<>();
+
+        for (String peerId : peerIds) {
+            if (activeChannels.containsKey(peerId)) {
+                list.add(activeChannels.get(peerId));
             }
         }
+
+        return list;
     }
 
-    public void sendNewBlock(BlockWrapper blockWrapper) {
-        for (Channel channel : activeChannels.values()) {
-            channel.getP2pHandler().sendNewBlock(blockWrapper.getBlock(), blockWrapper.getTtl());
+    public List<Channel> getIdleChannels() {
+        List<Channel> list = new ArrayList<>();
+
+        for (Channel c : activeChannels.values()) {
+            if (c.getMessageQueue().isIdle()) {
+                list.add(c);
+            }
         }
-    }
 
-    public void onNewForeignBlock(BlockWrapper blockWrapper) {
-        newForeignBlocks.add(blockWrapper);
+        return list;
     }
-
-    // use for ipv4
-    private boolean isSelfAddress(InetSocketAddress address) {
-        String inIP = address.getAddress().toString();
-        inIP = inIP.substring(inIP.lastIndexOf("/") + 1);
-        return inIP.equals(kernel.getConfig().getNodeSpec().getNodeIp()) && (address.getPort() == kernel.getConfig()
-                .getNodeSpec().getNodePort());
-    }
-
 }

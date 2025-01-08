@@ -35,7 +35,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.xdag.config.Config;
-import io.xdag.net.node.Node;
+import io.xdag.net.NodeManager.Node;
+
 import java.util.concurrent.ThreadFactory;
 
 import lombok.Getter;
@@ -62,6 +63,11 @@ public class PeerClient {
     private final KeyPair coinbase;
     private final EventLoopGroup workerGroup;
     private final Config config;
+    /**
+     * -- GETTER --
+     *  Get or create the local node instance
+     */
+    @Getter
     private Node node;
 
     /**
@@ -74,6 +80,7 @@ public class PeerClient {
         this.ip = config.getNodeSpec().getNodeIp();
         this.port = config.getNodeSpec().getNodePort();
         this.coinbase = coinbase;
+        this.node = new Node(ip, port);
         this.workerGroup = new NioEventLoopGroup(0, factory);
     }
 
@@ -90,7 +97,7 @@ public class PeerClient {
      * @param xdagChannelInitializer Channel initializer
      * @return ChannelFuture for the connection
      */
-    public ChannelFuture connect(Node remoteNode, XdagChannelInitializer xdagChannelInitializer) {
+    public ChannelFuture connect(NodeManager.Node remoteNode, XdagChannelInitializer xdagChannelInitializer) {
         Bootstrap b = new Bootstrap();
         b.group(workerGroup);
         b.channel(NioSocketChannel.class);
@@ -112,13 +119,4 @@ public class PeerClient {
         workerGroup.terminationFuture().syncUninterruptibly();
     }
 
-    /**
-     * Get or create the local node instance
-     */
-    public Node getNode() {
-        if (node == null) {
-            node = new Node(ip, port);
-        }
-        return node;
-    }
 }

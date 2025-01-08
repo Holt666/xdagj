@@ -26,9 +26,7 @@ package io.xdag.config.spec;
 
 import io.xdag.Network;
 import io.xdag.net.message.MessageCode;
-import io.xdag.net.node.Node;
 
-import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Set;
 
@@ -37,6 +35,8 @@ import java.util.Set;
  * Defines methods to access node parameters and network settings
  */
 public interface NodeSpec {
+
+    int DEFAULT_P2P_PORT = 8001;
 
     // Network related methods
     Network getNetwork();
@@ -50,8 +50,10 @@ public interface NodeSpec {
     // Network handshake and messaging
     int getNetHandshakeExpiry();
     Set<MessageCode> getNetPrioritizedMessages();
+    int getNetRelayRedundancy();
     int getNetMaxInboundConnectionsPerIp();
     int getNetMaxInboundConnections();
+    int getNetMaxOutboundConnections();
     int getNetChannelIdleTimeout();
 
     // Node connection settings
@@ -65,10 +67,6 @@ public interface NodeSpec {
     // Node operation parameters
     int getTTL();
     int getAwardEpoch();
-
-    // Authorized addresses management
-    List<InetSocketAddress> getAuthorizedAddresses();
-    void setAuthorizedAddresses(List<InetSocketAddress> list);
 
     // Storage configuration
     String getStoreDir();
@@ -89,6 +87,7 @@ public interface NodeSpec {
     // There appears to be a typo in method name - should be "getNodeRatio"
     double getNodeRation();
 
+    int getMaxSeedNodes(Network network);
     List<String> getSeedNodesDns(Network network);
-    List<Node> getSeedNodesFromLocal(Network network);
+    List<String> getSeedNodesAddresses(Network network);
 }

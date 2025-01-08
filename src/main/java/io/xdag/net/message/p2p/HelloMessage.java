@@ -56,6 +56,7 @@ public class HelloMessage extends HandshakeMessage {
                 ", latestBlockNumber=" + latestBlockNumber +
                 ", secret=" + BytesUtils.toHexString(secret) +
                 ", timestamp=" + timestamp +
+                ", signature=" + signature.encodedBytes().toHexString() +
                 '}';
     }
 }

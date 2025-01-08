@@ -23,93 +23,71 @@
  */
 package io.xdag.net.message.p2p;
 
+import io.xdag.net.NodeManager.Node;
 import io.xdag.net.message.Message;
 import io.xdag.net.message.MessageCode;
-import io.xdag.net.node.NodeInfo;
 import io.xdag.utils.SimpleDecoder;
 import io.xdag.utils.SimpleEncoder;
 import lombok.Getter;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Getter
 public class NodesMessage extends Message {
 
-    private final List<NodeInfo> nodes;
-    private final Set<String> authorizedAddresses;
+    public static final int MAX_NODES = 256;
+
+    private final List<Node> nodes;
 
     /**
-     * Create a NODES message with a list of nodes and authorized addresses
+     * Create a NODES message.
      *
-     * @param nodes List of nodes to include in the message
-     * @param authorizedAddresses Set of authorized addresses (only included by seed nodes)
+     * @param nodes
      */
-    public NodesMessage(List<NodeInfo> nodes, Set<String> authorizedAddresses) {
+    public NodesMessage(List<Node> nodes) {
         super(MessageCode.NODES, null);
 
         this.nodes = nodes;
-        this.authorizedAddresses = authorizedAddresses != null ? authorizedAddresses : new HashSet<>();
 
         SimpleEncoder enc = new SimpleEncoder();
-        // Write nodes
         enc.writeInt(nodes.size());
-        for (NodeInfo node : nodes) {
-            enc.writeBytes(node.toBytes());
+        for (Node n : nodes) {
+            enc.writeString(n.getIp());
+            enc.writeInt(n.getPort());
         }
-        
-        // Write authorized addresses
-        enc.writeInt(this.authorizedAddresses.size());
-        for (String address : this.authorizedAddresses) {
-            enc.writeString(address);
-        }
-        
         this.body = enc.toBytes();
     }
 
     /**
-     * Create a NODES message with only nodes list
-     */
-    public NodesMessage(List<NodeInfo> nodes) {
-        this(nodes, null);
-    }
-
-    /**
-     * Create a message from encoded data
+     * Parse a NODES message from byte array.
+     *
+     * @param body
      */
     public NodesMessage(byte[] body) {
         super(MessageCode.NODES, null);
 
-        SimpleDecoder dec = new SimpleDecoder(body);
-        
-        // Read nodes
-        int nodesSize = dec.readInt();
         this.nodes = new ArrayList<>();
-        for (int i = 0; i < nodesSize; i++) {
-            byte[] nodeBytes = dec.readBytes();
-            NodeInfo node = NodeInfo.fromBytes(nodeBytes);
-            if (node != null) {
-                nodes.add(node);
-            }
-        }
-
-        // Read authorized addresses
-        int authorizedSize = dec.readInt();
-        this.authorizedAddresses = new HashSet<>();
-        for (int i = 0; i < authorizedSize; i++) {
-            authorizedAddresses.add(dec.readString());
+        SimpleDecoder dec = new SimpleDecoder(body);
+        for (int i = 0, size = dec.readInt(); i < size; i++) {
+            String host = dec.readString();
+            int port = dec.readInt();
+            nodes.add(new Node(host, port));
         }
 
         this.body = body;
     }
 
+    public boolean validate() {
+        return nodes != null && nodes.size() <= MAX_NODES;
+    }
+
+    public List<Node> getNodes() {
+        return nodes;
+    }
+
     @Override
     public String toString() {
-        return "NodesMessage{" +
-                "nodes=" + nodes.size() +
-                ", authorizedAddresses=" + authorizedAddresses.size() +
-                '}';
+        return "NodesMessage [# nodes =" + nodes.size() + "]";
     }
 } 

@@ -28,6 +28,7 @@ import static io.xdag.utils.WalletUtils.toBase58;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.xdag.utils.TimeUtils;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.crypto.KeyPair;
@@ -147,7 +148,7 @@ public abstract class HandshakeMessage extends Message {
                 && clientId != null && clientId.length() < 128
                 && latestBlockNumber >= 0
                 && secret != null && secret.length == InitMessage.SECRET_LENGTH
-                && Math.abs(System.currentTimeMillis() - timestamp) <= config.getNodeSpec().getNetHandshakeExpiry()
+                && Math.abs(TimeUtils.currentTimeMillis() - timestamp) <= config.getNodeSpec().getNetHandshakeExpiry()
                 && signature != null
                 && peerId.equals(toBase58(Keys.toBytesAddress(publicKey)))) {
 
@@ -160,7 +161,7 @@ public abstract class HandshakeMessage extends Message {
     /**
      * Constructs a Peer object from the handshake info.
      */
-    public Peer getPeer(String ip, SECPPublicKey publicKey) {
-        return new Peer(network, networkVersion, peerId, publicKey, ip, port, clientId, capabilities, latestBlockNumber);
+    public Peer getPeer(String ip) {
+        return new Peer(network, networkVersion, peerId, ip, port, clientId, capabilities, latestBlockNumber);
     }
 }

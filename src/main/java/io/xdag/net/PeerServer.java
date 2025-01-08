@@ -54,15 +54,9 @@ public class PeerServer extends AbstractXdagLifecycle {
 
     @Override
     protected void doStart() {
-        start(kernel.getConfig().getNodeSpec().getNodeIp(), kernel.getConfig().getNodeSpec().getNodePort());
-    }
+        String ip = kernel.getConfig().getNodeSpec().getNodeIp();
+        int port = kernel.getConfig().getNodeSpec().getNodePort();
 
-    @Override
-    protected void doStop() {
-        close();
-    }
-
-    public void start(String ip, int port) {
         try {
             // Choose appropriate EventLoopGroup implementation based on OS
             if(SystemUtils.IS_OS_LINUX) {
@@ -77,16 +71,16 @@ public class PeerServer extends AbstractXdagLifecycle {
             }
 
             ServerBootstrap b = NettyUtils.nativeEventLoopGroup(bossGroup, workerGroup);
-            
+
             // Configure TCP parameters
             b.childOption(ChannelOption.TCP_NODELAY, true);
             b.childOption(ChannelOption.SO_KEEPALIVE, true);
             b.childOption(ChannelOption.MESSAGE_SIZE_ESTIMATOR, DefaultMessageSizeEstimator.DEFAULT);
             b.childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, kernel.getConfig().getNodeSpec().getConnectionTimeout());
-            
+
             // Add logging handler
             b.handler(new LoggingHandler());
-            b.childHandler(new XdagChannelInitializer(kernel, true, null));
+            b.childHandler(new XdagChannelInitializer(kernel, null));
 
             log.debug("Xdag Node start host:[{}:{}].", ip, port);
             channelFuture = b.bind(ip, port).sync();
@@ -97,12 +91,13 @@ public class PeerServer extends AbstractXdagLifecycle {
                 bossGroup.shutdownGracefully();
             }
             if (workerGroup != null) {
-                workerGroup.shutdownGracefully(); 
+                workerGroup.shutdownGracefully();
             }
         }
     }
 
-    public void close() {
+    @Override
+    protected void doStop() {
         if (channelFuture != null && channelFuture.channel().isOpen()) {
             try {
                 channelFuture.channel().close().sync();

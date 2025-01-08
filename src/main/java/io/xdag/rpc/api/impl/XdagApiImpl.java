@@ -631,7 +631,7 @@ public class XdagApiImpl extends AbstractXdagLifecycle implements XdagApi {
         for (BlockWrapper blockWrapper : txs) {
             ImportResult result = kernel.getSyncMgr().validateAndAddNewBlock(blockWrapper);
             if (result == ImportResult.IMPORTED_BEST || result == ImportResult.IMPORTED_NOT_BEST) {
-                kernel.getChannelMgr().sendNewBlock(blockWrapper);
+                kernel.getPow().getBroadcaster().broadcast(blockWrapper);
                 resInfo.add(BasicUtils.hash2Address(blockWrapper.getBlock().getHashLow()));
             }
         }

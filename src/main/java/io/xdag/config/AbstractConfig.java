@@ -25,6 +25,7 @@
 package io.xdag.config;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.typesafe.config.ConfigFactory;
 import io.xdag.Network;
 import io.xdag.config.spec.*;
@@ -33,13 +34,13 @@ import io.xdag.core.XdagField;
 import io.xdag.net.Capability;
 import io.xdag.net.CapabilityTreeSet;
 import io.xdag.net.message.MessageCode;
-import io.xdag.net.node.Node;
+import io.xdag.net.NodeManager.Node;
+import io.xdag.utils.WalletUtils;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.SystemUtils;
 
-import java.net.InetSocketAddress;
 import java.util.*;
 
 @Slf4j
@@ -94,7 +95,8 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
     protected boolean enableTxHistory = false;
     protected long txPageSizeLimit = 500;
     protected boolean enableGenerateBlock = false;
-    protected List<Node> seedNodes = Lists.newArrayList();
+    protected Set<Node> seedNodes = Sets.newHashSet();
+    protected List<String> seedNodesAddresses = Lists.newArrayList();
 
     // Storage configuration
     protected String rootDir;
@@ -112,8 +114,6 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
     protected String walletKeyFile;
 
     protected int TTL = 5;
-    // Authorized addresses configuration
-    protected List<InetSocketAddress> authorizedAddresses = Lists.newArrayList();
 
     // Wallet configuration
     protected String walletFilePath;
@@ -243,10 +243,28 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
         nodeIp = config.hasPath("node.ip") ? config.getString("node.ip") : "127.0.0.1";
         nodePort = config.hasPath("node.port") ? config.getInt("node.port") : 8001;
         nodeTag = config.hasPath("node.tag") ? config.getString("node.tag") : "xdagj";
-        List<String> seedNodesList = config.hasPath("node.seednodes") ? config.getStringList("node.seednodes") : Lists.newArrayList();
-        for (String node : seedNodesList) {
+
+        // Parse seed nodes with format: "address@ip:port,address@ip:port,..."
+        String seedIpAddr = config.hasPath("node.seed.ipaddr") ? config.getString("node.seed.ipaddr") : "";
+        String[] nodes = seedIpAddr.trim().split(",");
+        for (String node : nodes) {
             if (!node.trim().isEmpty()) {
-                seedNodes.add(new Node(node, 8001));
+                String[] tokens = node.trim().split(":");
+                if (tokens.length == 2) {
+                    seedNodes.add(new Node(tokens[0], Integer.parseInt(tokens[1])));
+                } else {
+                    seedNodes.add(new Node(tokens[0], DEFAULT_P2P_PORT));
+                }
+            }
+        }
+
+        String seedAddress = config.hasPath("node.seed.address") ? config.getString("node.seed.address") : "";
+        String[] addresses = seedAddress.trim().split(",");
+        for (String address : addresses) {
+            if (!address.trim().isEmpty()) {
+                if(WalletUtils.checkAddress(address)) {
+                    seedNodesAddresses.add(address);
+                }
             }
         }
         rejectAddress = config.hasPath("node.reject.transaction.address") ? config.getString("node.reject.transaction.address") : "";
@@ -416,6 +434,16 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
     }
 
     @Override
+    public int getMaxSeedNodes(Network network) {
+        return switch (network) {
+            case MAINNET -> 20;
+            case TESTNET -> 10;
+            case DEVNET -> 5;
+            default -> 2;
+        };
+    }
+
+    @Override
     public List<String> getSeedNodesDns(Network network) {
         List<String> seeds = Lists.newArrayList();
         switch (network) {
@@ -438,18 +466,8 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
     }
 
     @Override
-    public List<Node> getSeedNodesFromLocal(Network network){
-        return seedNodes;
-    }
-
-    @Override
-    public List<InetSocketAddress> getAuthorizedAddresses() {
-        return authorizedAddresses;
-    }
-
-    @Override
-    public void setAuthorizedAddresses(List<InetSocketAddress> list) {
-        this.authorizedAddresses = list;
+    public List<String> getSeedNodesAddresses(Network network) {
+        return seedNodesAddresses;
     }
 
 }

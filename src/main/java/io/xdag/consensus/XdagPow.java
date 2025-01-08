@@ -28,6 +28,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.xdag.Kernel;
 import io.xdag.Wallet;
+import io.xdag.config.Config;
 import io.xdag.core.XdagLifecycle;
 import io.xdag.core.*;
 import io.xdag.crypto.Hash;
@@ -36,13 +37,12 @@ import io.xdag.crypto.RandomXMemory;
 import io.xdag.listener.BlockMessage;
 import io.xdag.listener.Listener;
 import io.xdag.listener.PretopMessage;
+import io.xdag.net.Channel;
 import io.xdag.net.ChannelManager;
+import io.xdag.net.message.consensus.NewBlockMessage;
 import io.xdag.pool.ChannelSupervise;
 import io.xdag.pool.PoolAwardManager;
-import io.xdag.utils.BytesUtils;
-import io.xdag.utils.XdagRandomUtils;
-import io.xdag.utils.XdagSha256Digest;
-import io.xdag.utils.XdagTime;
+import io.xdag.utils.*;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
@@ -51,6 +51,7 @@ import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.bytes.MutableBytes;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -67,8 +68,10 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
 
 
     private final Kernel kernel;
+    private final Config config;
     protected BlockingQueue<Event> events = new LinkedBlockingQueue<>();
     protected Timer timer;
+    @Getter
     protected Broadcaster broadcaster;
     @Getter
     protected GetShares sharesFromPools;
@@ -85,6 +88,10 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
     protected AtomicReference<Task> currentTask = new AtomicReference<>();
     protected AtomicLong taskIndex = new AtomicLong(0L);
     private boolean isWorking = false;
+
+    protected List<String> seedNodesAddresses;
+    protected List<Channel> activeSeedNodes;
+    protected long lastUpdate;
 
     private final ExecutorService timerExecutor = Executors.newSingleThreadExecutor(new BasicThreadFactory.Builder()
             .namingPattern("XdagPow-timer-thread")
@@ -107,6 +114,7 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
 
     public XdagPow(Kernel kernel) {
         this.kernel = kernel;
+        this.config = kernel.getConfig();
         this.blockchain = kernel.getBlockchain();
         this.channelMgr = kernel.getChannelMgr();
         this.timer = new Timer();
@@ -115,7 +123,7 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
         this.sharesFromPools = new GetShares();
         this.poolAwardManager = kernel.getPoolAwardManager();
         this.wallet = kernel.getWallet();
-
+        this.seedNodesAddresses = config.getNodeSpec().getSeedNodesAddresses(config.getNetwork());
     }
 
     @Override
@@ -140,6 +148,7 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
 
     public void newBlock() {
         log.debug("Start new block generate....");
+        updateSeedNodes();
         long sendTime = XdagTime.getMainTime();
         resetTimeout(sendTime);
         if (randomXUtils != null && randomXUtils.isRandomxFork(XdagTime.getEpoch(sendTime))) {
@@ -412,6 +421,20 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
         }
     }
 
+    /**
+     * Update the validator sets.
+     */
+    protected void updateSeedNodes() {
+        int maxSeedNodes = config.getNodeSpec().getMaxSeedNodes(config.getNetwork());
+
+        seedNodesAddresses = config.getNodeSpec().getSeedNodesAddresses(config.getNetwork());
+        if (seedNodesAddresses.size() > maxSeedNodes) {
+            seedNodesAddresses = seedNodesAddresses.subList(0, maxSeedNodes);
+        }
+        activeSeedNodes = channelMgr.getActiveChannels(seedNodesAddresses);
+        lastUpdate = TimeUtils.currentTimeMillis();
+    }
+
     public static class Event {
 
         @Getter
@@ -511,7 +534,17 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
                     log.error(e.getMessage(), e);
                 }
                 if (bw != null) {
-                    channelMgr.sendNewBlock(bw);
+                    List<Channel> channels = activeSeedNodes;
+                    if (channels != null) {
+                        int[] indices = ArrayUtils.permutation(channels.size());
+                        for (int i = 0; i < indices.length && i < config.getNodeSpec().getNetRelayRedundancy(); i++) {
+                            Channel c = channels.get(indices[i]);
+                            if (c.isActive()) {
+                                NewBlockMessage msg = new NewBlockMessage(bw.getBlock(), bw.getTtl());
+                                c.getMessageQueue().sendMessage(msg);
+                            }
+                        }
+                    }
                 }
             }
         }

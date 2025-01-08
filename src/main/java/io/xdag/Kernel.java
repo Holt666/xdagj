@@ -40,7 +40,7 @@ import io.xdag.db.mysql.TransactionHistoryStoreImpl;
 import io.xdag.db.rocksdb.*;
 import io.xdag.net.*;
 import io.xdag.net.message.MessageQueue;
-import io.xdag.net.node.NodeManager;
+import io.xdag.net.NodeManager;
 import io.xdag.pool.WebSocketServer;
 import io.xdag.pool.PoolAwardManagerImpl;
 import io.xdag.rpc.api.XdagApi;
@@ -127,7 +127,6 @@ public class Kernel {
 
         // Initialize channel manager
         channelMgr = new ChannelManager(this);
-        channelMgr.start();
 
         // Initialize database components
         dbFactory = new RocksdbFactory(this.config);
@@ -257,14 +256,13 @@ public class Kernel {
         pow.stop();
 
         // Stop networking layer
-        channelMgr.stop();
         nodeMgr.stop();
 
         // Close message queue timer
         MessageQueue.timer.shutdown();
 
         // Close P2P networking
-        p2p.close();
+        p2p.stop();
         client.close();
 
         // Stop data layer

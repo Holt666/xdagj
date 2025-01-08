@@ -249,7 +249,7 @@ public class Commands {
         for (BlockWrapper blockWrapper : txs) {
             ImportResult result = kernel.getSyncMgr().validateAndAddNewBlock(blockWrapper);
             if (result == ImportResult.IMPORTED_BEST || result == ImportResult.IMPORTED_NOT_BEST) {
-                kernel.getChannelMgr().sendNewBlock(blockWrapper);
+                kernel.getPow().getBroadcaster().broadcast(blockWrapper);
                 str.append(hash2Address(blockWrapper.getBlock().getHashLow())).append("\n");
             }
         }
@@ -390,7 +390,7 @@ public class Commands {
      * Connect to remote node
      */
     public void connect(String server, int port) {
-        kernel.getNodeMgr().doConnect(server, port);
+        //kernel.getNodeMgr().doConnect(server, port);
     }
 
     /**
@@ -741,12 +741,13 @@ public class Commands {
         for (BlockWrapper blockWrapper : txs) {
             ImportResult result = kernel.getSyncMgr().validateAndAddNewBlock(blockWrapper);
             if (result == ImportResult.IMPORTED_BEST || result == ImportResult.IMPORTED_NOT_BEST) {
-                kernel.getChannelMgr().sendNewBlock(blockWrapper);
+                kernel.getPow().getBroadcaster().broadcast(blockWrapper);
                 str.append(BasicUtils.hash2Address(blockWrapper.getBlock().getHashLow())).append("\n");
             }
         }
         return str.append("}, it will take several minutes to complete the transaction.").toString();
     }
+
 
     /**
      * Distribute block rewards to node
@@ -765,7 +766,7 @@ public class Commands {
         for (BlockWrapper blockWrapper : txs) {
             ImportResult result = kernel.getSyncMgr().validateAndAddNewBlock(blockWrapper);
             if (result == ImportResult.IMPORTED_BEST || result == ImportResult.IMPORTED_NOT_BEST) {
-                kernel.getChannelMgr().sendNewBlock(blockWrapper);
+                kernel.getPow().getBroadcaster().broadcast(blockWrapper);
                 str.append(BasicUtils.hash2Address(blockWrapper.getBlock().getHashLow()));
             } else {
                 return new StringBuilder("This transaction block is invalid. Tx hash:")
