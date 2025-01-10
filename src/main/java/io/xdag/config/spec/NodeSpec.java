@@ -55,6 +55,7 @@ public interface NodeSpec {
     int getNetMaxInboundConnections();
     int getNetMaxOutboundConnections();
     int getNetChannelIdleTimeout();
+    boolean getSyncDisconnectOnInvalidBlock();
 
     // Node connection settings
     String getNodeIp();
@@ -87,7 +88,7 @@ public interface NodeSpec {
     // There appears to be a typo in method name - should be "getNodeRatio"
     double getNodeRation();
 
-    int getMaxSeedNodes(Network network);
-    List<String> getSeedNodesDns(Network network);
-    List<String> getSeedNodesAddresses(Network network);
+    int getMaxSeedNodes();
+    List<String> getSeedNodesDns();
+    List<String> getSeedNodesAddresses();
 }

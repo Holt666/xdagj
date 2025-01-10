@@ -78,6 +78,8 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
     protected int netHandshakeExpiry = 5 * 60 * 1000;
     protected int netChannelIdleTimeout = 2 * 60 * 1000;
 
+    protected boolean syncDisconnectOnInvalidBlock = false;
+
     // Prioritized network messages
     protected Set<MessageCode> netPrioritizedMessages = new HashSet<>(Arrays.asList(
             MessageCode.NEW_BLOCK,
@@ -201,6 +203,11 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
     @Override
     public Set<MessageCode> getNetPrioritizedMessages() {
         return this.netPrioritizedMessages;
+    }
+
+    @Override
+    public boolean getSyncDisconnectOnInvalidBlock() {
+        return syncDisconnectOnInvalidBlock;
     }
 
     @Override
@@ -434,7 +441,7 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
     }
 
     @Override
-    public int getMaxSeedNodes(Network network) {
+    public int getMaxSeedNodes() {
         return switch (network) {
             case MAINNET -> 20;
             case TESTNET -> 10;
@@ -444,7 +451,7 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
     }
 
     @Override
-    public List<String> getSeedNodesDns(Network network) {
+    public List<String> getSeedNodesDns() {
         List<String> seeds = Lists.newArrayList();
         switch (network) {
             case MAINNET:{
@@ -466,7 +473,7 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
     }
 
     @Override
-    public List<String> getSeedNodesAddresses(Network network) {
+    public List<String> getSeedNodesAddresses() {
         return seedNodesAddresses;
     }
 

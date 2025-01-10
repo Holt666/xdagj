@@ -247,7 +247,7 @@ public class Commands {
         // Create and broadcast transaction blocks
         List<BlockWrapper> txs = createTransactionBlock(ourAccounts, to, remark);
         for (BlockWrapper blockWrapper : txs) {
-            ImportResult result = kernel.getSyncMgr().validateAndAddNewBlock(blockWrapper);
+            ImportResult result = kernel.getSync().validateAndAddNewBlock(blockWrapper);
             if (result == ImportResult.IMPORTED_BEST || result == ImportResult.IMPORTED_NOT_BEST) {
                 kernel.getPow().getBroadcaster().broadcast(blockWrapper);
                 str.append(hash2Address(blockWrapper.getBlock().getHashLow())).append("\n");
@@ -739,7 +739,7 @@ public class Commands {
         // Generate multiple transaction blocks
         List<BlockWrapper> txs = createTransactionBlock(ourBlocks, to, remark);
         for (BlockWrapper blockWrapper : txs) {
-            ImportResult result = kernel.getSyncMgr().validateAndAddNewBlock(blockWrapper);
+            ImportResult result = kernel.getSync().validateAndAddNewBlock(blockWrapper);
             if (result == ImportResult.IMPORTED_BEST || result == ImportResult.IMPORTED_NOT_BEST) {
                 kernel.getPow().getBroadcaster().broadcast(blockWrapper);
                 str.append(BasicUtils.hash2Address(blockWrapper.getBlock().getHashLow())).append("\n");
@@ -764,7 +764,7 @@ public class Commands {
         // Generate transaction blocks to reward node
         List<BlockWrapper> txs = createTransactionBlock(paymentsToNodesMap, to, remark);
         for (BlockWrapper blockWrapper : txs) {
-            ImportResult result = kernel.getSyncMgr().validateAndAddNewBlock(blockWrapper);
+            ImportResult result = kernel.getSync().validateAndAddNewBlock(blockWrapper);
             if (result == ImportResult.IMPORTED_BEST || result == ImportResult.IMPORTED_NOT_BEST) {
                 kernel.getPow().getBroadcaster().broadcast(blockWrapper);
                 str.append(BasicUtils.hash2Address(blockWrapper.getBlock().getHashLow()));

@@ -123,7 +123,7 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
         this.sharesFromPools = new GetShares();
         this.poolAwardManager = kernel.getPoolAwardManager();
         this.wallet = kernel.getWallet();
-        this.seedNodesAddresses = config.getNodeSpec().getSeedNodesAddresses(config.getNetwork());
+        this.seedNodesAddresses = config.getNodeSpec().getSeedNodesAddresses();
     }
 
     @Override
@@ -425,9 +425,9 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
      * Update the validator sets.
      */
     protected void updateSeedNodes() {
-        int maxSeedNodes = config.getNodeSpec().getMaxSeedNodes(config.getNetwork());
+        int maxSeedNodes = config.getNodeSpec().getMaxSeedNodes();
 
-        seedNodesAddresses = config.getNodeSpec().getSeedNodesAddresses(config.getNetwork());
+        seedNodesAddresses = config.getNodeSpec().getSeedNodesAddresses();
         if (seedNodesAddresses.size() > maxSeedNodes) {
             seedNodesAddresses = seedNodesAddresses.subList(0, maxSeedNodes);
         }

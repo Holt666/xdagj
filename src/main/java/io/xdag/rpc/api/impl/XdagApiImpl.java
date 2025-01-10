@@ -270,7 +270,7 @@ public class XdagApiImpl extends AbstractXdagLifecycle implements XdagApi {
         Block block = new Block(new XdagBlock(Hex.decode(rawData)));
         ImportResult result;
         if (checkTransaction(block)){
-            result = kernel.getSyncMgr().importBlock(
+            result = kernel.getSync().importBlock(
                     new BlockWrapper(block, kernel.getConfig().getNodeSpec().getTTL()));
         } else {
             result = ImportResult.INVALID_BLOCK;
@@ -629,7 +629,7 @@ public class XdagApiImpl extends AbstractXdagLifecycle implements XdagApi {
         // create transaction
         List<BlockWrapper> txs = kernel.getWallet().createTransactionBlock(ourAccounts, to, remark);
         for (BlockWrapper blockWrapper : txs) {
-            ImportResult result = kernel.getSyncMgr().validateAndAddNewBlock(blockWrapper);
+            ImportResult result = kernel.getSync().validateAndAddNewBlock(blockWrapper);
             if (result == ImportResult.IMPORTED_BEST || result == ImportResult.IMPORTED_NOT_BEST) {
                 kernel.getPow().getBroadcaster().broadcast(blockWrapper);
                 resInfo.add(BasicUtils.hash2Address(blockWrapper.getBlock().getHashLow()));

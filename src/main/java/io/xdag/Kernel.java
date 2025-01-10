@@ -212,9 +212,6 @@ public class Kernel {
         sync = new XdagSync(this);
         sync.start();
 
-        syncMgr = new SyncManager(this);
-        syncMgr.start();
-
         poolAwardManager = new PoolAwardManagerImpl(this);
 
         // Initialize mining

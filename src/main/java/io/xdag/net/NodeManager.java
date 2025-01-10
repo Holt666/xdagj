@@ -111,10 +111,10 @@ public class NodeManager extends AbstractXdagLifecycle {
     }
 
 
-    public Set<Node> getSeedNodes(Network network) {
+    public Set<Node> getSeedNodes() {
         Set<Node> nodes = new HashSet<>();
 
-        List<String> seedDnsNames = config.getNodeSpec().getSeedNodesDns(network);
+        List<String> seedDnsNames = config.getNodeSpec().getSeedNodesDns();
         seedDnsNames.parallelStream()
                 .filter(Objects::nonNull)
                 .map(String::trim)
@@ -160,7 +160,7 @@ public class NodeManager extends AbstractXdagLifecycle {
      * Fetches seed nodes from DNS records or configuration.
      */
     protected void doFetch() {
-        addNodes(getSeedNodes(config.getNetwork()));
+        addNodes(getSeedNodes());
     }
 
     /**

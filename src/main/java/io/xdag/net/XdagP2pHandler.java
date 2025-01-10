@@ -57,7 +57,6 @@ import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.bytes.MutableBytes;
-import org.apache.tuweni.bytes.MutableBytes32;
 import org.hyperledger.besu.crypto.SecureRandomProvider;
 
 import static io.xdag.net.message.p2p.NodesMessage.MAX_NODES;
@@ -367,7 +366,7 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
             return ReasonCode.DUPLICATED_PEER_ID;
         }
 
-        if (nodeSpec.getSeedNodesAddresses(config.getNetwork()).contains(peer.getPeerId()) // is a validator
+        if (nodeSpec.getSeedNodesAddresses().contains(peer.getPeerId()) // is a validator
                 && channelMgr.isActiveIP(channel.getRemoteIp()) // already connected
                 && config.getNetwork() == Network.MAINNET) { // on main net
             return ReasonCode.SEED_IP_LIMITED;
@@ -400,13 +399,14 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
      */
     protected void processNewBlock(NewBlockMessage msg) {
         Block block = msg.getBlock();
-        if (syncMgr.isSyncOld()) {
+        if (kernel.getSync().isSyncOld()) {
             return;
         }
 
+        channel.getRemotePeer().setLatestBlockNumber(msg.getBlock().getInfo().getHeight());
         log.debug("processNewBlock:{} from node {}", block.getHashLow(), channel.getRemoteAddress());
         BlockWrapper bw = new BlockWrapper(block, msg.getTtl() - 1, channel.getRemotePeer(), false);
-        syncMgr.validateAndAddNewBlock(bw);
+        kernel.getSync().validateAndAddNewBlock(bw);
     }
 
     protected void processSyncBlock(SyncBlockMessage msg) {
@@ -414,7 +414,7 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
 
         log.debug("processSyncBlock:{}  from node {}", block.getHashLow(), channel.getRemoteAddress());
         BlockWrapper bw = new BlockWrapper(block, msg.getTtl() - 1, channel.getRemotePeer(), true);
-        syncMgr.validateAndAddNewBlock(bw);
+        kernel.getSync().validateAndAddNewBlock(bw);
     }
 
     /**
@@ -502,48 +502,9 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
         }
     }
 
-    /**
-     * ********************** Xdag Message ************************
-     */
-    public void sendNewBlock(Block newBlock, int TTL) {
-        log.debug("send block:{} to node:{}", newBlock.getHashLow(), channel.getRemoteAddress());
-        NewBlockMessage msg = new NewBlockMessage(newBlock, TTL);
-        sendMessage(msg);
-    }
-
-    public long sendGetBlocks(long startTime, long endTime) {
-        log.debug("Request blocks between {} and {} from node {}",
-                FastDateFormat.getInstance("yyyy-MM-dd HH:mm:ss.SSS").format(XdagTime.xdagTimestampToMs(startTime)),
-                FastDateFormat.getInstance("yyyy-MM-dd HH:mm:ss.SSS").format(XdagTime.xdagTimestampToMs(endTime)),
-                channel.getRemoteAddress());
-        BlocksRequestMessage msg = new BlocksRequestMessage(startTime, endTime, chain.getXdagStats());
-        sendMessage(msg);
-        return msg.getRandom();
-    }
-
-    public long sendGetBlock(MutableBytes32 hash, boolean isOld) {
-        XdagMessage msg;
-        //        log.debug("sendGetBlock:[{}]", Hex.toHexString(hash));
-        msg = isOld ? new SyncBlockRequestMessage(hash, kernel.getBlockchain().getXdagStats())
-                : new BlockRequestMessage(hash, kernel.getBlockchain().getXdagStats());
-        log.debug("Request block {} isold: {} from node {}", hash, isOld,channel.getRemoteAddress());
-        sendMessage(msg);
-        return msg.getRandom();
-    }
-
-    public long sendGetSums(long startTime, long endTime) {
-        SumRequestMessage msg = new SumRequestMessage(startTime, endTime, chain.getXdagStats());
-        sendMessage(msg);
-        return msg.getRandom();
-    }
-
-    public void sendMessage(Message message) {
-        msgQueue.sendMessage(message);
-    }
-
     public void updateXdagStats(XdagMessage message) {
         // Confirm that the remote stats has been updated, used to check local state.
-        syncMgr.getIsUpdateXdagStats().compareAndSet(false, true);
+        kernel.getSync().getIsUpdateXdagStats().compareAndSet(false, true);
         XdagStats remoteXdagStats = message.getXdagStats();
         chain.getXdagStats().update(remoteXdagStats);
     }
