@@ -34,6 +34,7 @@ import java.security.NoSuchProviderException;
 import java.util.List;
 import java.util.TimeZone;
 
+import io.xdag.consensus.XdagSync;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.tuweni.bytes.Bytes32;
@@ -96,7 +97,7 @@ public class CommandsTest {
 
     Blockchain blockchain;
 
-    SyncManager syncManager;
+    XdagSync sync;
 
     Commands commands;
 
@@ -115,13 +116,13 @@ public class CommandsTest {
         addressStore = Mockito.mock(AddressStore.class);
         wallet = Mockito.mock(Wallet.class);
         blockchain = Mockito.mock(Blockchain.class);
-        syncManager = Mockito.mock(SyncManager.class);
+        sync = Mockito.mock(XdagSync.class);
         blockStore = Mockito.mock(BlockStore.class);
 
         Mockito.when(kernel.getAddressStore()).thenReturn(addressStore);
         Mockito.when(kernel.getWallet()).thenReturn(wallet);
         Mockito.when(kernel.getBlockchain()).thenReturn(blockchain);
-        Mockito.when(kernel.getSyncMgr()).thenReturn(syncManager);
+        Mockito.when(kernel.getSync()).thenReturn(sync);
         Mockito.when(kernel.getBlockStore()).thenReturn(blockStore);
 
         Mockito.when(wallet.getAccounts()).thenReturn(accounts);

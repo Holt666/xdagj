@@ -29,7 +29,7 @@ import io.xdag.Kernel;
 import io.xdag.Network;
 import io.xdag.config.Config;
 import io.xdag.config.spec.NodeSpec;
-import io.xdag.consensus.SyncManager;
+import io.xdag.consensus.XdagSync;
 import io.xdag.core.Block;
 import io.xdag.core.BlockWrapper;
 import io.xdag.core.Blockchain;
@@ -83,7 +83,7 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
     private final ChannelManager channelMgr;
     private final NodeManager nodeMgr;
     private final PeerClient client;
-    private final SyncManager syncMgr;
+    private final XdagSync sync;
     private final MessageQueue msgQueue;
 
     private final AtomicBoolean isHandshakeDone = new AtomicBoolean(false);
@@ -107,7 +107,7 @@ public class XdagP2pHandler extends SimpleChannelInboundHandler<Message> {
         this.nodeMgr = kernel.getNodeMgr();
         this.client = kernel.getClient();
 
-        this.syncMgr = kernel.getSyncMgr();
+        this.sync = kernel.getSync();
         this.msgQueue = channel.getMessageQueue();
     }
 

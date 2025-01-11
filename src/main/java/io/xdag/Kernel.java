@@ -29,7 +29,6 @@ import io.xdag.config.Config;
 import io.xdag.config.DevnetConfig;
 import io.xdag.config.MainnetConfig;
 import io.xdag.config.TestnetConfig;
-import io.xdag.consensus.SyncManager;
 import io.xdag.consensus.XdagPow;
 import io.xdag.consensus.XdagSync;
 import io.xdag.core.*;
@@ -79,7 +78,6 @@ public class Kernel {
     protected PeerServer p2p;
     protected XdagSync sync;
     protected XdagPow pow;
-    private SyncManager syncMgr;
 
     protected byte[] firstAccount;
     protected Block firstBlock;
@@ -118,7 +116,7 @@ public class Kernel {
     /**
      * Start the kernel.
      */
-    public synchronized void testStart() throws Exception {
+    public synchronized void testStart() {
         if (isRunning.get()) {
             return;
         }
@@ -249,7 +247,6 @@ public class Kernel {
 
         // Stop consensus
         sync.stop();
-        syncMgr.stop();
         pow.stop();
 
         // Stop networking layer
