@@ -48,7 +48,6 @@ import com.google.common.collect.Lists;
 
 import io.xdag.Kernel;
 import io.xdag.Wallet;
-import io.xdag.consensus.SyncManager;
 import io.xdag.BlockBuilder;
 import io.xdag.config.Config;
 import io.xdag.config.DevnetConfig;
