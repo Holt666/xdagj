@@ -292,19 +292,6 @@ public class XdagSync extends AbstractXdagLifecycle implements SyncManager {
         }
     }
 
-    /**
-     * Get timestamp of latest confirmed main block
-     */
-    public long getLastTime() {
-        long height = blockStore.getXdagStatus().nmain;
-        if(height == 0) return 0;
-        Block lastBlock = blockStore.getBlockByHeight(height);
-        if (lastBlock != null) {
-            return lastBlock.getTimestamp();
-        }
-        return 0;
-    }
-
     public long sendGetBlock(Channel channel, MutableBytes32 hash) {
         XdagMessage msg = new SyncBlockRequestMessage(hash, chain.getXdagStats());
         log.debug("Request block {}, from node {}", hash, channel.getRemoteAddress());

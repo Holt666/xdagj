@@ -92,6 +92,6 @@ public class Peer {
      */
     @Override
     public String toString() {
-        return getPeerId() + "@" + ip + ":" + port;
+        return latestBlockNumber + "->" + getPeerId() + "@" + ip + ":" + port;
     }
 }

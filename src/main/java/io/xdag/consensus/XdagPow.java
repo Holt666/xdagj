@@ -438,9 +438,6 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
     protected void processNewBlock(Channel channel, Message message) {
         NewBlockMessage msg = (NewBlockMessage)message;
         Block block = msg.getBlock();
-        if (!kernel.getSync().getSyncDone().get()) {
-            return;
-        }
 
         channel.getRemotePeer().setLatestBlockNumber(msg.getBlock().getInfo().getHeight());
         log.debug("processNewBlock:{} from node {}", block.getHashLow(), channel.getRemoteAddress());
