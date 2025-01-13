@@ -101,17 +101,6 @@ public interface BlockStore extends XdagLifecycle {
 
     byte[] getPreSeed();
 
-    // sums.dat and sum.dat
-    void saveBlockSums(Block block);
-
-    MutableBytes getSums(String key);
-
-    void putSums(String key, Bytes sums);
-
-    void updateSum(String key, long sum, long size, long index);
-
-    int loadSum(long starttime, long endtime, MutableBytes sums);
-
     void saveXdagStatus(XdagStats status);
 
 }

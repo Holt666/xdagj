@@ -37,13 +37,11 @@ import io.xdag.db.execption.SerializationException;
 import io.xdag.utils.BasicUtils;
 import io.xdag.utils.BlockUtils;
 import io.xdag.utils.BytesUtils;
-import io.xdag.utils.FileUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
-import org.apache.tuweni.bytes.MutableBytes;
 import org.apache.tuweni.units.bigints.UInt64;
 import org.bouncycastle.util.encoders.Hex;
 import org.objenesis.strategy.StdInstantiatorStrategy;
@@ -51,7 +49,6 @@ import org.objenesis.strategy.StdInstantiatorStrategy;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
-import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
@@ -278,7 +275,6 @@ public class BlockStoreImpl implements BlockStore {
         // Fix: time中只拿key的后缀（hashlow）就够了，值可以不存
         timeSource.put(BlockUtils.getTimeKey(time, block.getHashLow()), new byte[]{0});
         blockSource.put(block.getHashLow().toArray(), block.getXdagBlock().getData().toArray());
-        saveBlockSums(block);
         saveBlockInfo(block.getInfo());
     }
 
@@ -339,129 +335,6 @@ public class BlockStoreImpl implements BlockStore {
             }
             return Boolean.FALSE;
         });
-    }
-
-    public void saveBlockSums(Block block) {
-        long size = 512;
-        long sum = block.getXdagBlock().getSum();
-        long time = block.getTimestamp();
-        List<String> filename = FileUtils.getFileName(time);
-        for (int i = 0; i < filename.size(); i++) {
-            updateSum(filename.get(i), sum, size, (time >> (40 - 8 * i)) & 0xff);
-        }
-    }
-
-    public MutableBytes getSums(String key) {
-        byte[] value = indexSource.get(BytesUtils.merge(SUMS_BLOCK_INFO, key.getBytes(StandardCharsets.UTF_8)));
-        if (value == null) {
-            return null;
-        } else {
-            MutableBytes sums = null;
-            try {
-                sums = MutableBytes.wrap((byte[]) deserialize(value, byte[].class));
-            } catch (DeserializationException e) {
-                log.error(e.getMessage(), e);
-            }
-            return sums;
-        }
-    }
-
-    public void putSums(String key, Bytes sums) {
-        byte[] value = null;
-        try {
-            value = serialize(sums.toArray());
-        } catch (SerializationException e) {
-            log.error(e.getMessage(), e);
-        }
-        indexSource.put(BytesUtils.merge(SUMS_BLOCK_INFO, key.getBytes(StandardCharsets.UTF_8)), value);
-    }
-
-    public void updateSum(String key, long sum, long size, long index) {
-        MutableBytes sums = getSums(key);
-        if (sums == null) {
-//            sums = new byte[4096];
-            sums = MutableBytes.create(4096);
-//            System.arraycopy(BytesUtils.longToBytes(sum, true), 0, sums, (int) (16 * index), 8);
-            sums.set((int) (16 * index), Bytes.wrap(BytesUtils.longToBytes(sum, true)));
-//            System.arraycopy(BytesUtils.longToBytes(size, true), 0, sums, (int) (index * 16 + 8), 8);
-            sums.set((int) (index * 16 + 8), Bytes.wrap(BytesUtils.longToBytes(size, true)));
-            putSums(key, sums);
-        } else {
-            // size + sum
-//            byte[] data = ArrayUtils.subarray(sums, 16 * (int)index, 16 * (int)index + 16);
-            MutableBytes data = sums.slice(16 * (int) index, 16).mutableCopy();
-//            sum += BytesUtils.bytesToLong(data, 0, true);
-            sum += data.getLong(0, ByteOrder.LITTLE_ENDIAN);
-//            size += BytesUtils.bytesToLong(data, 8, true);
-            size += data.getLong(8, ByteOrder.LITTLE_ENDIAN);
-//            System.arraycopy(BytesUtils.longToBytes(sum, true), 0, data, 0, 8);
-            data.set(0, Bytes.wrap(BytesUtils.longToBytes(sum, true)));
-//            System.arraycopy(BytesUtils.longToBytes(size, true), 0, data, 8, 8);
-            data.set(8, Bytes.wrap(BytesUtils.longToBytes(size, true)));
-//            System.arraycopy(data, 0, sums, 16 * (int)index, 16);
-            sums.set(16 * (int) index, data.slice(0, 16));
-            putSums(key, sums);
-        }
-    }
-
-    public int loadSum(long starttime, long endtime, MutableBytes sums) {
-        int level;
-        String key;
-        endtime -= starttime;
-
-        if (endtime == 0 || (endtime & (endtime - 1)) != 0) {
-            return -1;
-        }
-//        if (endtime == 0 || (endtime & (endtime - 1)) != 0 || (endtime & 0xFFFEEEEEEEEFFFFFL) != 0) return -1;
-
-        for (level = -6; endtime != 0; level++, endtime >>= 4) {
-        }
-
-        List<String> files = FileUtils.getFileName((starttime) & 0xffffff000000L);
-
-        if (level < 2) {
-            key = files.get(3);
-        } else if (level < 4) {
-            key = files.get(2);
-        } else if (level < 6) {
-            key = files.get(1);
-        } else {
-            key = files.get(0);
-        }
-
-        Bytes buf = getSums(key);
-        if (buf == null) {
-//            Arrays.fill(sums, (byte)0);
-            sums.fill((byte) 0);
-            return 1;
-        }
-        long size = 0;
-        long sum = 0;
-        if ((level & 1) != 0) {
-//            Arrays.fill(sums, (byte)0);
-            sums.fill((byte) 0);
-            for (int i = 1; i <= 256; i++) {
-//                long totalsum = BytesUtils.bytesToLong(buf, i * 16, true);
-                long totalsum = buf.getLong((i-1) * 16, ByteOrder.LITTLE_ENDIAN);
-                sum += totalsum;
-//                long totalsize = BytesUtils.bytesToLong(buf, i * 16 + 8, true);
-                long totalsize = buf.getLong((i-1) * 16 + 8, ByteOrder.LITTLE_ENDIAN);
-                size += totalsize;
-                if (i % 16 == 0) {
-//                    System.arraycopy(BytesUtils.longToBytes(sum, true), 0, sums, i - 16, 8);
-                    sums.set(i - 16, Bytes.wrap(BytesUtils.longToBytes(sum, true)));
-//                    System.arraycopy(BytesUtils.longToBytes(size, true), 0, sums, i - 8, 8);
-                    sums.set(i - 8, Bytes.wrap(BytesUtils.longToBytes(size, true)));
-                    sum = 0;
-                    size = 0;
-                }
-            }
-        } else {
-            long index = (starttime >> (level + 4) * 4) & 0xf0;
-//            System.arraycopy(buf, (int) (index * 16), sums, 0, 16 * 16);
-            sums.set(0, buf.slice((int) index * 16, 16 * 16));
-        }
-        return 1;
     }
 
     public void saveBlockInfo(BlockInfo blockInfo) {

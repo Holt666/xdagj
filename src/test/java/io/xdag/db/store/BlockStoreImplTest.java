@@ -33,7 +33,6 @@ import io.xdag.core.XdagStats;
 import io.xdag.crypto.Keys;
 import io.xdag.db.BlockStore;
 import io.xdag.db.rocksdb.*;
-import org.apache.tuweni.bytes.MutableBytes;
 import org.bouncycastle.util.encoders.Hex;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.junit.Before;
@@ -157,20 +156,6 @@ public class BlockStoreImplTest {
         assertNotNull(bs.getOurBlock(1));
         bs.removeOurBlock(block.getHashLow().toArray());
         assertTrue(equalBytes(bs.getOurBlock(1).toArray(), new byte[]{0}));
-    }
-
-    @Test
-    public void testSaveBlockSums()
-            throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
-        BlockStore bs = new BlockStoreImpl(indexSource, timeSource, blockSource,TxHistorySource);
-        bs.start();
-        long time = 1602951025307L;
-        KeyPair key = Keys.createEcKeyPair();
-        Block block = generateAddressBlock(config, key, time);
-        bs.saveBlock(block);
-//        byte[] sums = new byte[256];
-        MutableBytes sums = MutableBytes.create(256);
-        bs.loadSum(time, time + 64 * 1024, sums);
     }
 
     @Test
