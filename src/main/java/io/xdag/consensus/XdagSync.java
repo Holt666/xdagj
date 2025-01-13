@@ -314,10 +314,17 @@ public class XdagSync extends AbstractXdagLifecycle implements SyncManager {
                         Bytes32.wrap(hash).toHexString(),
                         channel.getRemoteAddress());
                 channel.getMessageQueue().sendMessage(new SyncBlockResponseMessage(block, 1));
+                if(channel.getRemotePeer().getLatestBlockNumber() < block.getInfo().getHeight()) {
+                    channel.getRemotePeer().setLatestBlockNumber(block.getInfo().getHeight());
+                }
             }
             updateXdagStats(request);
         } else if(msg instanceof SyncBlockResponseMessage response) {
             Block block = response.getBlock();
+
+            if(channel.getRemotePeer().getLatestBlockNumber() < response.getBlock().getInfo().getHeight()) {
+                channel.getRemotePeer().setLatestBlockNumber(response.getBlock().getInfo().getHeight());
+            }
 
             log.debug("processSyncBlock:{}  from node {}", block.getHashLow(), channel.getRemoteAddress());
             BlockWrapper bw = new BlockWrapper(block, response.getTtl() - 1, channel.getRemotePeer());
@@ -327,6 +334,7 @@ public class XdagSync extends AbstractXdagLifecycle implements SyncManager {
     }
 
     public void updateXdagStats(XdagMessage message) {
+
         XdagStats remoteXdagStats = message.getXdagStats();
         chain.getXdagStats().update(remoteXdagStats);
     }
