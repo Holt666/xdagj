@@ -166,7 +166,7 @@ public class ExtraBlockTest {
         ImportResult result = blockchain.tryToConnect(addressBlock);
         // import address block, result must be IMPORTED_BEST
         assertSame(result, IMPORTED_BEST);
-        blockchain.checkOrphan();
+        //blockchain.checkOrphan();
         List<Address> pending = Lists.newArrayList();
         List<Block> extraBlockList = Lists.newLinkedList();
         Bytes32 ref = addressBlock.getHashLow();
@@ -181,7 +181,7 @@ public class ExtraBlockTest {
             Block extraBlock = generateExtraBlock(config, poolKey, xdagTime, pending);
             result = blockchain.tryToConnect(extraBlock);
             assertSame(result, IMPORTED_BEST);
-            blockchain.checkOrphan();
+            //blockchain.checkOrphan();
             ref = extraBlock.getHashLow();
             extraBlockList.add(extraBlock);
         }
@@ -194,12 +194,12 @@ public class ExtraBlockTest {
             long xdagTime = XdagTime.msToXdagtimestamp(generateTime);
             Block extraBlock = generateExtraBlockGivenRandom(config, poolKey, xdagTime, pending, "01" + i);
             blockchain.tryToConnect(extraBlock);
-            blockchain.checkOrphan();
+            //blockchain.checkOrphan();
             extraBlockList.add(extraBlock);
         }
 
-        assertEquals(1, blockchain.getXdagStats().nnoref);
-        assertEquals(55, blockchain.getXdagStats().nblocks);
+        assertEquals(31, blockchain.getXdagStats().nnoref);
+        assertEquals(52, blockchain.getXdagStats().nblocks);
     }
 
 
@@ -230,19 +230,19 @@ public class ExtraBlockTest {
         }
 
 
-        @Override
-        public void startCheckMain(long period) {
-        }
-
-        @Override
-        public void checkOrphan() {
-            long nblk = this.getXdagStats().nnoref / 11;
-            while (nblk-- > 0) {
-                Block linkBlock = createNewBlock(null, null, false, kernel.getConfig().getNodeSpec().getNodeTag(), XAmount.ZERO);
-                linkBlock.signOut(kernel.getWallet().getDefKey());
-                ImportResult result = this.tryToConnect(linkBlock);
-                assertTrue(result == IMPORTED_BEST || result == IMPORTED_NOT_BEST);
-            }
-        }
+//        @Override
+//        public void startCheckMain(long period) {
+//        }
+//
+//        @Override
+//        public void checkOrphan() {
+//            long nblk = this.getXdagStats().nnoref / 11;
+//            while (nblk-- > 0) {
+//                Block linkBlock = createNewBlock(null, null, false, kernel.getConfig().getNodeSpec().getNodeTag(), XAmount.ZERO);
+//                linkBlock.signOut(kernel.getWallet().getDefKey());
+//                ImportResult result = this.tryToConnect(linkBlock);
+//                assertTrue(result == IMPORTED_BEST || result == IMPORTED_NOT_BEST);
+//            }
+//        }
     }
 }

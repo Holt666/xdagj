@@ -82,9 +82,7 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
 
     // Prioritized network messages
     protected Set<MessageCode> netPrioritizedMessages = new HashSet<>(Arrays.asList(
-            MessageCode.NEW_BLOCK,
-            MessageCode.BLOCK_REQUEST,
-            MessageCode.BLOCKS_REQUEST));
+            MessageCode.NEW_BLOCK));
 
     // Node configuration
     protected String nodeIp;

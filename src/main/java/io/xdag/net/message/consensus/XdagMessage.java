@@ -40,15 +40,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public abstract class XdagMessage extends Message  {
-
-    protected long starttime;
-
-    protected long endtime;
-
     protected long random;
-
     protected Bytes32 hash;
-
     protected XdagStats xdagStats;
 
     public XdagMessage(MessageCode code, Class<?> responseMessageClass, byte[] body) {
@@ -57,11 +50,8 @@ public abstract class XdagMessage extends Message  {
         decode();
     }
 
-    public XdagMessage(MessageCode code, Class<?> responseMessageClass, long starttime, long endtime, long random, XdagStats xdagStats) {
+    public XdagMessage(MessageCode code, Class<?> responseMessageClass, long random, XdagStats xdagStats) {
         super(code, responseMessageClass);
-
-        this.starttime = starttime;
-        this.endtime = endtime;
         this.random = random;
         this.xdagStats = xdagStats;
 
@@ -70,11 +60,9 @@ public abstract class XdagMessage extends Message  {
         this.body = enc.toBytes();
     }
 
-    public XdagMessage(MessageCode code, Class<?> responseMessageClass, long starttime, long endtime, Bytes32 hash, XdagStats xdagStats) {
+    public XdagMessage(MessageCode code, Class<?> responseMessageClass, Bytes32 hash, XdagStats xdagStats) {
         super(code, responseMessageClass);
 
-        this.starttime = starttime;
-        this.endtime = endtime;
         this.hash = hash;
         this.xdagStats = xdagStats;
 
@@ -84,9 +72,6 @@ public abstract class XdagMessage extends Message  {
 
     protected SimpleEncoder encode() {
         SimpleEncoder enc = new SimpleEncoder();
-
-        enc.writeLong(starttime);
-        enc.writeLong(endtime);
         enc.writeLong(random);
         enc.writeBytes(hash.toArray());
 
@@ -101,9 +86,6 @@ public abstract class XdagMessage extends Message  {
 
     protected SimpleDecoder decode() {
         SimpleDecoder dec = new SimpleDecoder(this.body);
-
-        this.starttime = dec.readLong();
-        this.endtime = dec.readLong();
         this.random = dec.readLong();
         this.hash = Bytes32.wrap(dec.readBytes());
 

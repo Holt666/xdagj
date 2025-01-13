@@ -64,16 +64,9 @@ public class MessageFactory {
                 case PONG -> new PongMessage(body);
                 case GET_NODES -> new GetNodesMessage(body);
                 case NODES -> new NodesMessage(body);
-                case BLOCKS_REQUEST -> new BlocksRequestMessage(body);
-                case BLOCKS_REPLY -> new BlocksReplyMessage(body);
-                case SUMS_REQUEST -> new SumRequestMessage(body);
-                case SUMS_REPLY -> new SumReplyMessage(body);
-                case BLOCKEXT_REQUEST -> new BlockExtRequestMessage(body);
-                case BLOCKEXT_REPLY -> new BlockExtReplyMessage(body);
-                case BLOCK_REQUEST -> new BlockRequestMessage(body);
                 case NEW_BLOCK -> new NewBlockMessage(body);
-                case SYNC_BLOCK -> new SyncBlockMessage(body);
                 case SYNCBLOCK_REQUEST -> new SyncBlockRequestMessage(body);
+                case SYNCBLOCK_REPLY -> new SyncBlockResponseMessage(body);
             };
         } catch (Exception e) {
             throw new MessageException("Failed to decode message", e);

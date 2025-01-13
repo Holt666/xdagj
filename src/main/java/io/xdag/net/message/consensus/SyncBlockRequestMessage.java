@@ -32,7 +32,7 @@ import io.xdag.net.message.MessageCode;
 public class SyncBlockRequestMessage extends XdagMessage {
 
     public SyncBlockRequestMessage(MutableBytes hash, XdagStats xdagStats) {
-        super(MessageCode.SYNCBLOCK_REQUEST, SyncBlockMessage.class, 0, 0, Bytes32.wrap(hash), xdagStats);
+        super(MessageCode.SYNCBLOCK_REQUEST, SyncBlockResponseMessage.class, Bytes32.wrap(hash), xdagStats);
     }
 
     public SyncBlockRequestMessage(byte[] body) {

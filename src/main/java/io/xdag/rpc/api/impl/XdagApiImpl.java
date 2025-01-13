@@ -268,15 +268,10 @@ public class XdagApiImpl extends AbstractXdagLifecycle implements XdagApi {
         // 2. try to add blockchain
         // 3. check from address if valid.
         Block block = new Block(new XdagBlock(Hex.decode(rawData)));
-        ImportResult result;
         if (checkTransaction(block)){
-            result = kernel.getSync().importBlock(
-                    new BlockWrapper(block, kernel.getConfig().getNodeSpec().getTTL()));
-        } else {
-            result = ImportResult.INVALID_BLOCK;
+            kernel.getPow().getBroadcaster().broadcast(new BlockWrapper(block, kernel.getConfig().getNodeSpec().getTTL()));
         }
-        return result == ImportResult.IMPORTED_BEST || result == ImportResult.IMPORTED_NOT_BEST ?
-                BasicUtils.hash2Address(block.getHash()) : "INVALID_BLOCK " + result.getErrorInfo();
+        return BasicUtils.hash2Address(block.getHash());
     }
 
     @Override
@@ -629,7 +624,7 @@ public class XdagApiImpl extends AbstractXdagLifecycle implements XdagApi {
         // create transaction
         List<BlockWrapper> txs = kernel.getWallet().createTransactionBlock(ourAccounts, to, remark);
         for (BlockWrapper blockWrapper : txs) {
-            ImportResult result = kernel.getSync().validateAndAddNewBlock(blockWrapper);
+            ImportResult result = kernel.getBlockchain().tryToConnect(blockWrapper.getBlock());
             if (result == ImportResult.IMPORTED_BEST || result == ImportResult.IMPORTED_NOT_BEST) {
                 kernel.getPow().getBroadcaster().broadcast(blockWrapper);
                 resInfo.add(BasicUtils.hash2Address(blockWrapper.getBlock().getHashLow()));

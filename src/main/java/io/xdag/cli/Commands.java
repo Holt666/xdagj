@@ -247,7 +247,7 @@ public class Commands {
         // Create and broadcast transaction blocks
         List<BlockWrapper> txs = createTransactionBlock(ourAccounts, to, remark);
         for (BlockWrapper blockWrapper : txs) {
-            ImportResult result = kernel.getSync().validateAndAddNewBlock(blockWrapper);
+            ImportResult result = kernel.getBlockchain().tryToConnect(blockWrapper.getBlock());
             if (result == ImportResult.IMPORTED_BEST || result == ImportResult.IMPORTED_NOT_BEST) {
                 kernel.getPow().getBroadcaster().broadcast(blockWrapper);
                 str.append(hash2Address(blockWrapper.getBlock().getHashLow())).append("\n");
@@ -602,12 +602,10 @@ public class Commands {
      */
     public String keygen()
             throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
-        kernel.getXdagState().tempSet(XdagState.KEYS);
         kernel.getWallet().addAccountRandom();
 
         kernel.getWallet().flush();
         int size = kernel.getWallet().getAccounts().size();
-        kernel.getXdagState().rollback();
         return "Key " + (size - 1) + " generated and set as default,now key size is:" + size;
     }
 
@@ -615,7 +613,7 @@ public class Commands {
      * Get current XDAG state
      */
     public String state() {
-        return kernel.getXdagState().toString();
+        return kernel.getSync().getSyncDone().get()?"sync done":"syncing";
     }
 
     /**
@@ -739,7 +737,8 @@ public class Commands {
         // Generate multiple transaction blocks
         List<BlockWrapper> txs = createTransactionBlock(ourBlocks, to, remark);
         for (BlockWrapper blockWrapper : txs) {
-            ImportResult result = kernel.getSync().validateAndAddNewBlock(blockWrapper);
+            kernel.getPow().getBroadcaster().broadcast(blockWrapper);
+            ImportResult result = kernel.getBlockchain().tryToConnect(blockWrapper.getBlock());
             if (result == ImportResult.IMPORTED_BEST || result == ImportResult.IMPORTED_NOT_BEST) {
                 kernel.getPow().getBroadcaster().broadcast(blockWrapper);
                 str.append(BasicUtils.hash2Address(blockWrapper.getBlock().getHashLow())).append("\n");
@@ -764,7 +763,7 @@ public class Commands {
         // Generate transaction blocks to reward node
         List<BlockWrapper> txs = createTransactionBlock(paymentsToNodesMap, to, remark);
         for (BlockWrapper blockWrapper : txs) {
-            ImportResult result = kernel.getSync().validateAndAddNewBlock(blockWrapper);
+            ImportResult result = kernel.getBlockchain().tryToConnect(blockWrapper.getBlock());
             if (result == ImportResult.IMPORTED_BEST || result == ImportResult.IMPORTED_NOT_BEST) {
                 kernel.getPow().getBroadcaster().broadcast(blockWrapper);
                 str.append(BasicUtils.hash2Address(blockWrapper.getBlock().getHashLow()));

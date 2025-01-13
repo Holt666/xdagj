@@ -24,6 +24,7 @@
 
 package io.xdag.consensus;
 
+import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.xdag.Kernel;
@@ -39,12 +40,16 @@ import io.xdag.listener.Listener;
 import io.xdag.listener.PretopMessage;
 import io.xdag.net.Channel;
 import io.xdag.net.ChannelManager;
+import io.xdag.net.message.Message;
+import io.xdag.net.message.MessageCode;
 import io.xdag.net.message.consensus.NewBlockMessage;
 import io.xdag.pool.ChannelSupervise;
 import io.xdag.pool.PoolAwardManager;
 import io.xdag.utils.*;
+import io.xdag.utils.exception.UnreachableException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
@@ -69,6 +74,7 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
 
     private final Kernel kernel;
     private final Config config;
+    private final XdagSync sync;
     protected BlockingQueue<Event> events = new LinkedBlockingQueue<>();
     protected Timer timer;
     @Getter
@@ -115,6 +121,7 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
     public XdagPow(Kernel kernel) {
         this.kernel = kernel;
         this.config = kernel.getConfig();
+        this.sync = kernel.getSync();
         this.blockchain = kernel.getBlockchain();
         this.channelMgr = kernel.getChannelMgr();
         this.timer = new Timer();
@@ -387,14 +394,12 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
                 }
                 switch (ev.getType()) {
                     case TIMEOUT -> {
-                        if (kernel.getXdagState() == XdagState.SDST || kernel.getXdagState() == XdagState.STST
-                                || kernel.getXdagState() == XdagState.SYNC) {
+                        if (kernel.getSync().getSyncDone().get()) {
                             onTimeout();
                         }
                     }
                     case NEW_PRETOP -> {
-                        if (kernel.getXdagState() == XdagState.SDST || kernel.getXdagState() == XdagState.STST
-                                || kernel.getXdagState() == XdagState.SYNC) {
+                        if (kernel.getSync().getSyncDone().get()) {
                             onNewPreTop();
                         }
                     }
@@ -418,6 +423,39 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
         }
         if (msg instanceof PretopMessage message) {
             receiveNewPretop(message.getData());
+        }
+    }
+
+    public void onMessage(Channel channel, Message msg) {
+        // Group message handling by functionality
+        if (Objects.requireNonNull(msg.getCode()) == MessageCode.NEW_BLOCK) {
+            processNewBlock(channel, msg);
+        } else {
+            throw new UnreachableException("Unexpected message code: " + msg.getCode());
+        }
+    }
+
+    protected void processNewBlock(Channel channel, Message message) {
+        NewBlockMessage msg = (NewBlockMessage)message;
+        Block block = msg.getBlock();
+        if (!kernel.getSync().getSyncDone().get()) {
+            return;
+        }
+
+        channel.getRemotePeer().setLatestBlockNumber(msg.getBlock().getInfo().getHeight());
+        log.debug("processNewBlock:{} from node {}", block.getHashLow(), channel.getRemoteAddress());
+        BlockWrapper bw = new BlockWrapper(block, msg.getTtl() - 1, channel.getRemotePeer());
+
+        ImportResult result = kernel.getBlockchain().tryToConnect(bw.getBlock());
+        if(result == ImportResult.IMPORTED_BEST || result == ImportResult.IMPORTED_NOT_BEST) {
+            if(msg.getTtl() > 0) {
+                kernel.getPow().getBroadcaster().broadcast(bw);
+            }
+        }
+
+        if(result == ImportResult.NO_PARENT) {
+            log.debug("processNewBlock NO_PARENT");
+            sync.validateAndAddNewBlock(bw, channel);
         }
     }
 
@@ -534,18 +572,38 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
                     log.error(e.getMessage(), e);
                 }
                 if (bw != null) {
-                    List<Channel> channels = activeSeedNodes;
-                    if (channels != null) {
-                        int[] indices = ArrayUtils.permutation(channels.size());
-                        for (int i = 0; i < indices.length && i < config.getNodeSpec().getNetRelayRedundancy(); i++) {
-                            Channel c = channels.get(indices[i]);
-                            if (c.isActive()) {
-                                NewBlockMessage msg = new NewBlockMessage(bw.getBlock(), bw.getTtl());
-                                c.getMessageQueue().sendMessage(msg);
-                            }
-                        }
+                    List<Channel> activeChannels = channelMgr.getActiveChannels();
+                    if (activeChannels != null) {
+                        List<Channel> notSeedChannels = Lists.newArrayList();
+                       for(Channel c : activeChannels) {
+                           if(activeSeedNodes.contains(c)) {
+                               if (c.isActive() && isNotSelfOrSender(bw, c)) {
+                                   log.debug("Broadcaster send NewBlockMessage to seed:{}", c.getRemotePeer());
+                                   NewBlockMessage msg = new NewBlockMessage(bw.getBlock(), bw.getTtl());
+                                   c.getMessageQueue().sendMessage(msg);
+                               }
+                           } else {
+                               notSeedChannels.add(c);
+                           }
+                       }
+
+                       for (Channel c : notSeedChannels) {
+                           if (c.isActive() && isNotSelfOrSender(bw, c)) {
+                               log.debug("Broadcaster send NewBlockMessage to other:{}", c.getRemotePeer());
+                               NewBlockMessage msg = new NewBlockMessage(bw.getBlock(), bw.getTtl());
+                               c.getMessageQueue().sendMessage(msg);
+                           }
+                       }
                     }
                 }
+            }
+        }
+
+        public boolean isNotSelfOrSender(BlockWrapper bw, Channel c) {
+            if(bw.getSourcePeer() != null && !StringUtils.equals(c.getRemotePeer().getPeerId(), bw.getSourcePeer().getPeerId())) {
+                return false;
+            } else {
+                return true;
             }
         }
 

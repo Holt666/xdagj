@@ -26,9 +26,6 @@ package io.xdag;
 
 import io.xdag.cli.TelnetServer;
 import io.xdag.config.Config;
-import io.xdag.config.DevnetConfig;
-import io.xdag.config.MainnetConfig;
-import io.xdag.config.TestnetConfig;
 import io.xdag.consensus.XdagPow;
 import io.xdag.consensus.XdagSync;
 import io.xdag.core.*;
@@ -83,7 +80,6 @@ public class Kernel {
     protected Block firstBlock;
     protected WebSocketServer webSocketServer;
     protected PoolAwardManagerImpl poolAwardManager;
-    protected XdagState xdagState;
 
     // Counter for connected channels
     protected AtomicInteger channelsAccount = new AtomicInteger(0);
@@ -105,7 +101,6 @@ public class Kernel {
         this.config = config;
         this.wallet = wallet;
         this.coinbase = wallet.getDefKey();
-        this.xdagState = XdagState.INIT;
     }
 
     public Kernel(Config config, KeyPair coinbase) {
@@ -188,15 +183,6 @@ public class Kernel {
             }
         }
 
-        // Set initial state based on network type
-        if (config instanceof MainnetConfig) {
-            xdagState = XdagState.WAIT;
-        } else if (config instanceof TestnetConfig) {
-            xdagState = XdagState.WTST;
-        } else if (config instanceof DevnetConfig) {
-            xdagState = XdagState.WDST;
-        }
-
         // Initialize P2P networking
         p2p = new PeerServer(this);
         p2p.start();
@@ -258,9 +244,6 @@ public class Kernel {
         // Close P2P networking
         p2p.stop();
         client.close();
-
-        // Stop data layer
-        blockchain.stopCheckMain();
 
         // Close all databases
         for (DatabaseName name : DatabaseName.values()) {

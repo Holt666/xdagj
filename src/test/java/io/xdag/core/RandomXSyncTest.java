@@ -222,10 +222,6 @@ public class RandomXSyncTest {
             super(kernel);
         }
 
-        @Override
-        public void startCheckMain(long period) {
-
-        }
     }
 
     public class SyncThread extends Thread {

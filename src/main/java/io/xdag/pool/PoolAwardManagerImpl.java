@@ -261,7 +261,7 @@ public class PoolAwardManagerImpl extends AbstractXdagLifecycle implements PoolA
             block.signOut(wallet.getDefKey());
         }
         log.debug("tx block hash [{}]", block.getHash().toHexString());
-        kernel.getSync().validateAndAddNewBlock(new BlockWrapper(block, 5));
+        kernel.getPow().getBroadcaster().broadcast(new BlockWrapper(block, 5));
         // Rewards to the foundation and pool rewards are in the same transaction block
         transactionInfoSender.setTxBlock(block.getHash());
         transactionInfoSender.setDonateBlock(block.getHash());

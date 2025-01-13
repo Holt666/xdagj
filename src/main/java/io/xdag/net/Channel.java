@@ -155,7 +155,6 @@ public class Channel {
 
     @Override
     public String toString() {
-        return "Channel [" + (isInbound ? "Inbound" : "Outbound") + ", remoteIp = " + getRemoteIp() + ", remotePeer = "
-                + remotePeer + "]";
+        return "Channel [" + (isInbound ? "Inbound" : "Outbound") + ", remotePeer = " + remotePeer + "]";
     }
 }

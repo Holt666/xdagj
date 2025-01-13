@@ -23,10 +23,49 @@
  */
 package io.xdag.net.message.consensus;
 
+import io.xdag.core.Block;
+import io.xdag.utils.SimpleEncoder;
+import io.xdag.core.XdagBlock;
+import io.xdag.net.message.Message;
 import io.xdag.net.message.MessageCode;
+import io.xdag.utils.SimpleDecoder;
+import lombok.Getter;
+import lombok.Setter;
 
-public class BlockExtRequestMessage extends XdagMessage {
-    public BlockExtRequestMessage(byte[] body) {
-        super(MessageCode.BLOCKEXT_REQUEST, BlocksReplyMessage.class, body);
+@Getter
+@Setter
+public class SyncBlockResponseMessage extends Message {
+
+    private XdagBlock xdagBlock;
+    private Block block;
+    private int ttl;
+
+    public SyncBlockResponseMessage(byte[] body) {
+        super(MessageCode.SYNCBLOCK_REPLY, null);
+
+        SimpleDecoder dec = new SimpleDecoder(body);
+
+        this.body = dec.readBytes();
+        this.xdagBlock = new XdagBlock(this.body);
+        this.block = new Block(this.xdagBlock);
+        this.ttl = dec.readInt();
     }
+
+    public SyncBlockResponseMessage(Block block, int ttl) {
+        super(MessageCode.SYNCBLOCK_REPLY, null);
+
+        this.block = block;
+        this.ttl = ttl;
+
+        SimpleEncoder enc = encode();
+        this.body = enc.toBytes();
+    }
+
+    private SimpleEncoder encode() {
+        SimpleEncoder enc = new SimpleEncoder();
+        enc.writeBytes(this.block.toBytes());
+        enc.writeInt(ttl);
+        return enc;
+    }
+
 }

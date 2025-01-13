@@ -79,12 +79,6 @@ public interface Blockchain {
     // Get blocks within specified time range
     List<Block> getBlocksByTime(long starttime, long endtime);
 
-    // Start main chain check thread with given period
-    void startCheckMain(long period);
-
-    // Stop main chain check thread
-    void stopCheckMain();
-
     // Register blockchain event listener
     void registerListener(Listener listener);
 

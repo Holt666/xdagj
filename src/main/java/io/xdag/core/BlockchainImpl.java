@@ -43,7 +43,6 @@ import io.xdag.listener.PretopMessage;
 import io.xdag.utils.BasicUtils;
 import io.xdag.utils.BytesUtils;
 import io.xdag.utils.WalletUtils;
-import io.xdag.utils.XdagRandomUtils;
 import io.xdag.utils.XdagTime;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -68,8 +67,6 @@ import java.util.concurrent.*;
 import static io.xdag.config.Constants.*;
 import static io.xdag.config.Constants.MessageType.NEW_LINK;
 import static io.xdag.config.Constants.MessageType.PRE_TOP;
-import static io.xdag.core.ImportResult.IMPORTED_BEST;
-import static io.xdag.core.ImportResult.IMPORTED_NOT_BEST;
 import static io.xdag.core.XdagField.FieldType.*;
 import static io.xdag.utils.BasicUtils.*;
 import static io.xdag.utils.BytesUtils.equalBytes;
@@ -110,11 +107,8 @@ public class BlockchainImpl implements Blockchain {
     private final Kernel kernel;
     private final XdagTopStatus xdagTopStatus;
 
-    // Main chain checking components
-    private final ScheduledExecutorService checkLoop;
     private final RandomX randomx;
     private final List<Listener> listeners = Lists.newArrayList();
-    private ScheduledFuture<?> checkLoopFuture;
     
     // Snapshot related fields
     private final long snapshotHeight;
@@ -185,10 +179,6 @@ public class BlockchainImpl implements Blockchain {
         if (randomx != null) {
             randomx.setBlockchain(this);
         }
-
-        // Start main chain checking
-        checkLoop = new ScheduledThreadPoolExecutor(1, factory);
-        this.startCheckMain(1024);
     }
 
     // Initialize snapshot data
@@ -507,8 +497,7 @@ public class BlockchainImpl implements Blockchain {
             }
             txHistory.setTimestamp(time);
             try {
-                if (kernel.getXdagState() == XdagState.CDST || kernel.getXdagState() == XdagState.CTST || kernel.getXdagState() == XdagState.CONN
-                        || kernel.getXdagState() == XdagState.CDSTP || kernel.getXdagState() == XdagState.CTSTP || kernel.getXdagState() == XdagState.CONNP) {
+                if (!kernel.getSync().getSyncDone().get()) {
                     txHistoryStore.batchSaveTxHistory(txHistory);
                 } else {
                     if (!txHistoryStore.saveTxHistory(txHistory)) {
@@ -1551,64 +1540,6 @@ public class BlockchainImpl implements Blockchain {
     @Override
     public List<Block> getBlocksByTime(long starttime, long endtime) {
         return blockStore.getBlocksUsedTime(starttime, endtime);
-    }
-
-    @Override
-    public void startCheckMain(long period) {
-        if (checkLoop == null) {
-            return;
-        }
-        checkLoopFuture = checkLoop.scheduleAtFixedRate(this::checkState, 0, period, TimeUnit.MILLISECONDS);
-    }
-
-    public void checkState() {
-        // Prohibit Non-mining nodes generate link blocks
-        if (kernel.getConfig().getEnableGenerateBlock() &&
-                (kernel.getXdagState() == XdagState.SDST || XdagState.STST == kernel.getXdagState() || XdagState.SYNC == kernel.getXdagState())) {
-            checkOrphan();
-        }
-        checkMain();
-    }
-
-    public void checkOrphan() {
-        long nblk = xdagStats.nnoref / 11;
-        if (nblk > 0) {
-            boolean b = (nblk % 61) > (XdagRandomUtils.nextLong() % 61);
-            nblk = nblk / 61 + (b ? 1 : 0);
-        }
-        while (nblk-- > 0) {
-            Block linkBlock = createNewBlock(null, null, false, kernel.getConfig().getNodeSpec().getNodeTag(), XAmount.ZERO);
-            linkBlock.signOut(kernel.getWallet().getDefKey());
-            ImportResult result = this.tryToConnect(linkBlock);
-            if (result == IMPORTED_NOT_BEST || result == IMPORTED_BEST) {
-                onNewBlock(linkBlock);
-            }
-        }
-    }
-
-    public void checkMain() {
-        try {
-            checkNewMain();
-            // xdagStats state will change after checkNewMain
-            blockStore.saveXdagStatus(xdagStats);
-        } catch (Throwable e) {
-            log.error(e.getMessage(), e);
-        }
-    }
-
-    @Override
-    public void stopCheckMain() {
-        try {
-
-            if (checkLoopFuture != null) {
-                checkLoopFuture.cancel(true);
-            }
-            // Shutdown thread pool
-            checkLoop.shutdownNow();
-            checkLoop.awaitTermination(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            log.error(e.getMessage(), e);
-        }
     }
 
     public XAmount getStartAmount(long nmain) {

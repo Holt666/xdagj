@@ -359,10 +359,6 @@ public class SyncTest {
         }
 
         @Override
-        public void startCheckMain(long period) {
-        }
-
-        @Override
         public boolean isSyncFixFork(long currentHeight) {
             return false;
         }
@@ -376,10 +372,6 @@ public class SyncTest {
         public NewMockBlockchain(Kernel kernel, int testForkHeight) {
             super(kernel);
             this.testForkHeight = testForkHeight;
-        }
-
-        @Override
-        public void startCheckMain(long period) {
         }
 
         @Override

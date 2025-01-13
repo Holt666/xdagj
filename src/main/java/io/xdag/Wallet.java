@@ -108,8 +108,8 @@ public class Wallet {
      * Creates a new wallet instance.
      */
     public Wallet(Config config) {
-        this.file = FileUtils.getFile(config.getWalletSpec().getWalletFilePath());
         this.config = config;
+        this.file = FileUtils.getFile(config.getWalletSpec().getWalletFilePath());
     }
 
     /**

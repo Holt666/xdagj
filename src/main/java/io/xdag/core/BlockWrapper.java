@@ -42,35 +42,26 @@ public class BlockWrapper implements Cloneable {
     /**
      * The peer node from which this block was received
      */
-    private Peer remotePeer;
+    private Peer sourcePeer;
     // Timestamp for tracking NO_PARENT waiting time
     private long time;
-    
-    // Flag indicating if this is an old block
-    private boolean isOld;
 
     /**
      * Constructor with all fields
      * @param block The block to wrap
      * @param ttl Time to live value
-     * @param remotePeer The peer that sent this block
-     * @param isOld Whether this is an old block
+     * @param sourcePeer The peer that sent this block
      */
-    public BlockWrapper(Block block, int ttl, Peer remotePeer, boolean isOld) {
+    public BlockWrapper(Block block, int ttl, Peer sourcePeer) {
         this.block = block;
         this.ttl = ttl;
-        this.remotePeer = remotePeer;
-        this.isOld = isOld;
+        this.sourcePeer = sourcePeer;
     }
 
-    /**
-     * Constructor with only block and ttl
-     * @param block The block to wrap
-     * @param ttl Time to live value
-     */
     public BlockWrapper(Block block, int ttl) {
         this.block = block;
         this.ttl = ttl;
+        this.sourcePeer = sourcePeer;
     }
 
     @Override

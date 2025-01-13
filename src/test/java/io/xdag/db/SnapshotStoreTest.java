@@ -326,10 +326,5 @@ public class SnapshotStoreTest {
             super(kernel);
         }
 
-        @Override
-        public void startCheckMain(long period) {
-
-        }
-
     }
 }
