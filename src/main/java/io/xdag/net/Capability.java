@@ -35,7 +35,9 @@ public enum Capability {
     /**
      * Represents a light node that only stores block headers
      */
-    LIGHT_NODE;
+    LIGHT_NODE,
+
+    FAST_SYNC;
 
     /**
      * Creates a Capability enum from a string name

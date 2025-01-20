@@ -25,6 +25,8 @@
 package io.xdag.net.message;
 
 import io.xdag.net.message.consensus.*;
+import io.xdag.net.message.consensus.v2.*;
+import io.xdag.net.message.consensus.v2.NewBlockMessage;
 import io.xdag.net.message.p2p.DisconnectMessage;
 import io.xdag.net.message.p2p.GetNodesMessage;
 import io.xdag.net.message.p2p.HelloMessage;
@@ -56,6 +58,7 @@ public class MessageFactory {
 
         try {
             return switch (c) {
+                /* v1 */
                 case HANDSHAKE_INIT -> new InitMessage(body);
                 case HANDSHAKE_HELLO -> new HelloMessage(body);
                 case HANDSHAKE_WORLD -> new WorldMessage(body);
@@ -64,9 +67,16 @@ public class MessageFactory {
                 case PONG -> new PongMessage(body);
                 case GET_NODES -> new GetNodesMessage(body);
                 case NODES -> new NodesMessage(body);
-                case NEW_BLOCK -> new NewBlockMessage(body);
+                case NEW_BLOCK -> new io.xdag.net.message.consensus.NewBlockMessage(body);
                 case SYNCBLOCK_REQUEST -> new SyncBlockRequestMessage(body);
                 case SYNCBLOCK_REPLY -> new SyncBlockResponseMessage(body);
+                /* v2 */
+                case TRANSACTION -> new TransactionMessage(body);
+                case NEW_MAIN_BLOCK -> new NewBlockMessage(body);
+                case GET_MAIN_BLOCK -> new GetBlockMessage(body);
+                case MAIN_BLOCK -> new BlockMessage(body);
+                case GET_MAIN_BLOCK_PARTS -> new GetBlockPartsMessage(body);
+                case MAIN_BLOCK_PARTS -> new BlockPartsMessage(body);
             };
         } catch (Exception e) {
             throw new MessageException("Failed to decode message", e);

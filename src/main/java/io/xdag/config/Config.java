@@ -148,4 +148,6 @@ public interface Config {
      */
     FundSpec getFundSpec();
 
+    ChainSpec getChainSpec();
+
 }

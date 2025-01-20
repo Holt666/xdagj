@@ -29,6 +29,7 @@ import io.xdag.config.Config;
 import io.xdag.consensus.XdagPow;
 import io.xdag.consensus.XdagSync;
 import io.xdag.core.*;
+import io.xdag.core.v2.Dagchain;
 import io.xdag.crypto.Keys;
 import io.xdag.crypto.RandomX;
 import io.xdag.db.*;
@@ -69,6 +70,7 @@ public class Kernel {
 
     protected SnapshotStore snapshotStore;
     protected Blockchain blockchain;
+    protected Dagchain dagchain;
     protected PeerClient client;
     protected ChannelManager channelMgr;
     protected NodeManager nodeMgr;
@@ -186,7 +188,7 @@ public class Kernel {
         // Initialize P2P networking
         p2p = new PeerServer(this);
         p2p.start();
-        client = new PeerClient(this.config, this.coinbase);
+        client = new PeerClient(config, coinbase);
 
         // Initialize node management
         nodeMgr = new NodeManager(this);

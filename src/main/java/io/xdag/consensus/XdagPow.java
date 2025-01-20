@@ -124,13 +124,15 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
         this.sync = kernel.getSync();
         this.blockchain = kernel.getBlockchain();
         this.channelMgr = kernel.getChannelMgr();
-        this.timer = new Timer();
-        this.broadcaster = new Broadcaster();
+
         this.randomXUtils = kernel.getRandomx();
         this.sharesFromPools = new GetShares();
         this.poolAwardManager = kernel.getPoolAwardManager();
         this.wallet = kernel.getWallet();
         this.seedNodesAddresses = config.getNodeSpec().getSeedNodesAddresses();
+
+        this.timer = new Timer();
+        this.broadcaster = new Broadcaster();
     }
 
     @Override
@@ -516,10 +518,6 @@ public class XdagPow implements PoW, Listener, Runnable, XdagLifecycle {
              * Received a new pretop message.
              */
             NEW_PRETOP,
-            /**
-             * Received a new largest diff message.
-             */
-            NEW_DIFF,
         }
     }
 

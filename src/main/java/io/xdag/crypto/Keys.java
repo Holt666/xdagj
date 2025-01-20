@@ -31,12 +31,12 @@ import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.security.spec.ECGenParameterSpec;
+import java.util.Optional;
+
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.hyperledger.besu.crypto.KeyPair;
-import org.hyperledger.besu.crypto.SECPPublicKey;
-import org.hyperledger.besu.crypto.SecureRandomProvider;
-import org.hyperledger.besu.crypto.SignatureAlgorithm;
+import org.hyperledger.besu.crypto.*;
 
 /**
  * Crypto key utilities.
@@ -46,6 +46,8 @@ public class Keys {
     public static final String ALGORITHM = SignatureAlgorithm.ALGORITHM;
     public static final String PROVIDER = BouncyCastleProvider.PROVIDER_NAME;
     public static final String CURVE_NAME = "secp256k1";
+
+    public static final int ADDRESS_LEN = 20;
 
     static {
         if (Security.getProvider(PROVIDER) == null) {
@@ -95,8 +97,19 @@ public class Keys {
         return Hash.sha256hash160(Bytes.wrap(key.getPublicKey().asEcPoint(Sign.CURVE).getEncoded(true)));
     }
 
-    public static byte[] toBytesAddress(SECPPublicKey publicKey){
+    public static byte[] toBytesAddress(SECPPublicKey publicKey) {
         return Hash.sha256hash160(Bytes.wrap(publicKey.asEcPoint(Sign.CURVE).getEncoded(true)));
+    }
+
+    public static byte[] toBytesAddress(byte[] hash, SECPSignature signature) {
+        SECPPublicKey publicKey = Sign.SECP256K1.recoverPublicKeyFromSignature(Bytes32.wrap(hash), signature).get();
+        return toBytesAddress(publicKey);
+    }
+
+    public static boolean verify(byte[] hash, SECPSignature signature) {
+        Bytes32 whash = Bytes32.wrap(hash);
+        SECPPublicKey publicKey = Sign.SECP256K1.recoverPublicKeyFromSignature(whash, signature).get();
+        return  Sign.SECP256K1.verify(whash, signature, publicKey);
     }
 
 }

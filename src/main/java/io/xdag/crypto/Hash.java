@@ -37,6 +37,8 @@ import org.bouncycastle.crypto.params.KeyParameter;
  */
 public class Hash {
 
+    public static final int HASH_LEN = 32;
+
     /**
      * Get a new SHA-256 MessageDigest.
      *
@@ -58,6 +60,22 @@ public class Hash {
      */
     public static Bytes32 sha256(Bytes input) {
         return org.hyperledger.besu.crypto.Hash.sha256(input);
+    }
+
+    public static Bytes32 sha256(byte[] input) {
+        return org.hyperledger.besu.crypto.Hash.sha256(Bytes.wrap(input));
+    }
+
+    public static byte[] h256(byte[] input) {
+        return org.hyperledger.besu.crypto.Hash.sha256(Bytes.wrap(input)).toArray();
+    }
+
+    public static byte[] h256(byte[] one, byte[] two) {
+        byte[] all = new byte[one.length + two.length];
+        System.arraycopy(one, 0, all, 0, one.length);
+        System.arraycopy(two, 0, all, one.length, two.length);
+
+        return h256(all);
     }
 
     /**

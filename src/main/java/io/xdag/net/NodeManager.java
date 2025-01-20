@@ -27,7 +27,6 @@ package io.xdag.net;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.xdag.Kernel;
-import io.xdag.Network;
 import io.xdag.config.Config;
 import io.xdag.core.AbstractXdagLifecycle;
 

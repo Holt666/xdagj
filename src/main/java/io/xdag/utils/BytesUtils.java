@@ -34,11 +34,29 @@ import org.apache.tuweni.units.bigints.UInt64;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Utility class for byte array operations and conversions
  */
 public class BytesUtils {
+
+    /**
+     * Empty byte array.
+     */
+    public static final byte[] EMPTY_BYTES = new byte[0];
+
+    /**
+     * Empty address.
+     */
+    public static final byte[] EMPTY_ADDRESS = new byte[20];
+
+    /**
+     * Empty 256-bit hash.
+     * <p>
+     * Note: this is not the hash of empty byte array.
+     */
+    public static final byte[] EMPTY_HASH = new byte[32];
 
     /**
      * Converts an integer to a byte array
@@ -112,21 +130,6 @@ public class BytesUtils {
             buffer.order(ByteOrder.LITTLE_ENDIAN);
         }
         buffer.putShort(value);
-        return buffer.array();
-    }
-
-    /**
-     * Converts a byte to a byte array
-     * @param value The byte value to convert
-     * @param littleEndian If true, uses little-endian byte order
-     * @return Single element byte array
-     */
-    public static byte[] byteToBytes(byte value, boolean littleEndian) {
-        ByteBuffer buffer = ByteBuffer.allocate(1);
-        if (littleEndian) {
-            buffer.order(ByteOrder.LITTLE_ENDIAN);
-        }
-        buffer.put(value);
         return buffer.array();
     }
 
@@ -238,6 +241,14 @@ public class BytesUtils {
         return res;
     }
 
+    public static byte[] merge(byte b1, byte[] b2, byte[] b3) {
+        byte[] res = new byte[1 + b2.length + b3.length];
+        res[0] = b1;
+        System.arraycopy(b2, 0, res, 1, b2.length);
+        System.arraycopy(b3, 0, res, 1 + b2.length, b3.length);
+        return res;
+    }
+
     /**
      * Extracts a subarray from a byte array
      * @param arrays Source byte array
@@ -306,6 +317,41 @@ public class BytesUtils {
         return new byte[]{b};
     }
 
+    public static byte[] of(String str) {
+        return str.getBytes(StandardCharsets.UTF_8);
+    }
+
+    public static long toLong(byte[] bytes) {
+        return ((bytes[0] & 0xffL) << 56)
+                | ((bytes[1] & 0xffL) << 48)
+                | ((bytes[2] & 0xffL) << 40)
+                | ((bytes[3] & 0xffL) << 32)
+                | ((bytes[4] & 0xffL) << 24)
+                | ((bytes[5] & 0xffL) << 16)
+                | ((bytes[6] & 0xffL) << 8)
+                | (bytes[7] & 0xff);
+    }
+
+    public static int toInt(byte[] bytes) {
+        return ((bytes[0] & 0xff) << 24)
+                | ((bytes[1] & 0xff) << 16)
+                | ((bytes[2] & 0xff) << 8)
+                | (bytes[3] & 0xff);
+    }
+
+    public static byte[] of(long i) {
+        byte[] bytes = new byte[8];
+        bytes[0] = (byte) ((i >> 56) & 0xff);
+        bytes[1] = (byte) ((i >> 48) & 0xff);
+        bytes[2] = (byte) ((i >> 40) & 0xff);
+        bytes[3] = (byte) ((i >> 32) & 0xff);
+        bytes[4] = (byte) ((i >> 24) & 0xff);
+        bytes[5] = (byte) ((i >> 16) & 0xff);
+        bytes[6] = (byte) ((i >> 8) & 0xff);
+        bytes[7] = (byte) (i & 0xff);
+        return bytes;
+    }
+
     /**
      * Gets first byte from a byte array
      * @param bytes Source array
@@ -327,20 +373,6 @@ public class BytesUtils {
         }
         for (int i = 0; i < part.length; i++) {
             if (key[i] != part[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Checks if a byte array contains only zeros
-     * @param input Array to check
-     * @return True if array contains only zeros
-     */
-    public static boolean isFullZero(byte[] input) {
-        for (byte b : input) {
-            if (b != 0) {
                 return false;
             }
         }
@@ -447,17 +479,5 @@ public class BytesUtils {
      */
     public static UnsignedLong long2UnsignedLong(long number) {
         return UnsignedLong.valueOf(toHexString((ByteBuffer.allocate(8).putLong(number).array())),16);
-    }
-
-    public static byte[] parseIpString(String ipString) {
-        String[] parts = ipString.split("\\.");
-        if (parts.length != 4) {
-            return null;
-        }
-        byte[] bytes = new byte[4];
-        for (int i = 0; i < 4; i++) {
-            bytes[i] = (byte) Integer.parseInt(parts[i]);
-        }
-        return bytes;
     }
 }

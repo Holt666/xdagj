@@ -27,9 +27,11 @@ package io.xdag.utils;
 import io.xdag.Wallet;
 import io.xdag.crypto.Base58;
 import io.xdag.crypto.Bip32ECKeyPair;
+import io.xdag.crypto.Keys;
 import io.xdag.utils.exception.AddressFormatException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tuweni.bytes.Bytes32;
+import org.hyperledger.besu.crypto.KeyPair;
 
 import static io.xdag.crypto.Bip32ECKeyPair.HARDENED_BIT;
 
@@ -87,6 +89,10 @@ public class WalletUtils {
      */
     public static String toBase58(byte[] hash160) {
         return Base58.encodeChecked(hash160);
+    }
+
+    public static String toBase58(KeyPair keyPair) {
+        return toBase58(Keys.toBytesAddress(keyPair));
     }
 
     /**

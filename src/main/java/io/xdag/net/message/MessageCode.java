@@ -81,7 +81,18 @@ public enum MessageCode {
     // =======================================
     NEW_BLOCK(0x10),
     SYNCBLOCK_REQUEST(0x11),
-    SYNCBLOCK_REPLY(0x12);
+    SYNCBLOCK_REPLY(0x12),
+
+    // =======================================
+    // [0x20, 0x2f] Reserved for node
+    // =======================================
+    TRANSACTION(0x20),
+    NEW_MAIN_BLOCK(0x21),
+
+    GET_MAIN_BLOCK(0x22),
+    MAIN_BLOCK(0x23),
+    GET_MAIN_BLOCK_PARTS(0x24),
+    MAIN_BLOCK_PARTS(0x25);
 
 
     private static final MessageCode[] map = new MessageCode[256];

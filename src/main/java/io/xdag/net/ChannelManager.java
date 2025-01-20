@@ -32,19 +32,26 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import io.xdag.core.v2.KernelV2;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class ChannelManager {
 
-    private final Kernel kernel;
+//    private final Kernel kernel;
+    private final KernelV2 kernelv2;
 
     protected final ConcurrentHashMap<InetSocketAddress, Channel> channels = new ConcurrentHashMap<>();
 
     protected ConcurrentHashMap<String, Channel> activeChannels = new ConcurrentHashMap<>();
 
     public ChannelManager(Kernel kernel) {
-        this.kernel = kernel;
+//        this.kernel = kernel;
+        kernelv2 = null;
+    }
+
+    public ChannelManager(KernelV2 kernelv2) {
+        this.kernelv2 = kernelv2;
     }
 
     public boolean isActiveIP(String ip) {

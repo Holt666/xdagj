@@ -96,6 +96,10 @@ public class XAmount implements Comparable<XAmount> {
         return nano.movePointLeft(unit.exp).setScale(scale, FLOOR);
     }
 
+    public long toLong() {
+        return nano;
+    }
+
     /**
      * Convert from C-style XDAG amount representation
      */

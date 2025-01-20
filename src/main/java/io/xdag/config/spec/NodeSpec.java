@@ -88,7 +88,9 @@ public interface NodeSpec {
     // There appears to be a typo in method name - should be "getNodeRatio"
     double getNodeRation();
 
+
     int getMaxSeedNodes();
     List<String> getSeedNodesDns();
     List<String> getSeedNodesAddresses();
+    boolean getSyncFastSync();
 }

@@ -30,7 +30,9 @@ import com.typesafe.config.ConfigFactory;
 import io.xdag.Network;
 import io.xdag.config.spec.*;
 import io.xdag.core.XAmount;
+import io.xdag.core.XUnit;
 import io.xdag.core.XdagField;
+import io.xdag.core.v2.TransactionType;
 import io.xdag.net.Capability;
 import io.xdag.net.CapabilityTreeSet;
 import io.xdag.net.message.MessageCode;
@@ -41,12 +43,13 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.SystemUtils;
 
+import java.io.File;
 import java.util.*;
 
 @Slf4j
 @Getter
 @Setter
-public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, RPCSpec, SnapshotSpec, RandomxSpec, FundSpec {
+public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, RPCSpec, SnapshotSpec, RandomxSpec, FundSpec, ChainSpec {
 
     protected String configName;
 
@@ -180,6 +183,11 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
 
     @Override
     public FundSpec getFundSpec() {
+        return this;
+    }
+
+    @Override
+    public ChainSpec getChainSpec() {
         return this;
     }
 
@@ -475,4 +483,28 @@ public class AbstractConfig implements Config, AdminSpec, NodeSpec, WalletSpec, 
         return seedNodesAddresses;
     }
 
+    @Override
+    public boolean getSyncFastSync() {
+        return false;
+    }
+
+    @Override
+    public File getChainDir() {
+        return null;
+    }
+
+    @Override
+    public XAmount getMinTransactionFee() {
+        return XAmount.of(1, XUnit.XDAG);
+    }
+
+    @Override
+    public int getMaxTransactionDataSize(TransactionType type) {
+        return 512;
+    }
+
+    @Override
+    public XAmount getBlockReward(long blockNumber) {
+        return XAmount.of(50, XUnit.XDAG);
+    }
 }

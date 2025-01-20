@@ -24,6 +24,7 @@
 
 package io.xdag.consensus;
 
+import io.xdag.core.v2.XdagChannel;
 import io.xdag.net.Channel;
 import io.xdag.net.message.Message;
 

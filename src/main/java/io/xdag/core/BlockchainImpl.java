@@ -556,8 +556,7 @@ public class BlockchainImpl implements Blockchain {
             if (
                     (tmpRef == null
                             || blockRef.getInfo().getDifficulty().compareTo(calculateBlockDiff(tmpRef, calculateCurrentBlockDiff(tmpRef))) > 0) &&
-                            (blockRef0 == null || XdagTime.getEpoch(blockRef0.getTimestamp()) > XdagTime
-                                    .getEpoch(blockRef.getTimestamp()))
+                            (blockRef0 == null || XdagTime.getEpoch(blockRef0.getTimestamp()) > XdagTime.getEpoch(blockRef.getTimestamp()))
             ) {
                 if (!isFork) {
                     updateBlockFlag(blockRef, BI_MAIN_CHAIN, true);
@@ -670,8 +669,7 @@ public class BlockchainImpl implements Blockchain {
         log.debug("Unwind main to block,{}", block == null ? "null" : block.getHashLow().toHexString());
         if (xdagTopStatus.getTop() != null) {
             log.debug("now pretop : {}", xdagTopStatus.getPreTop() == null ? "null" : Bytes32.wrap(xdagTopStatus.getPreTop()).toHexString());
-            for (Block tmp = getBlockByHash(Bytes32.wrap(xdagTopStatus.getTop()), true); tmp != null
-                    && !blockEqual(block, tmp); tmp = getMaxDiffLink(tmp, true)) {
+            for (Block tmp = getBlockByHash(Bytes32.wrap(xdagTopStatus.getTop()), true); tmp != null && !blockEqual(block, tmp); tmp = getMaxDiffLink(tmp, true)) {
                 updateBlockFlag(tmp, BI_MAIN_CHAIN, false);
                 // Update corresponding flag information
                 if ((tmp.getInfo().flags & BI_MAIN) != 0) {
